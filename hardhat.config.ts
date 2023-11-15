@@ -52,7 +52,7 @@ const loadPrivateKeyFromKeyfile = () => {
     }
     const keythereum = require('keythereum')
 
-    const KEYSTORE = './clober-deployer-key.json'
+    const KEYSTORE = './deployer-key.json'
     const PASSWORD = readlineSync.question('Password: ', {
       hideEchoBack: true,
     })
@@ -73,7 +73,7 @@ const config: HardhatConfig = {
   solidity: {
     compilers: [
       {
-        version: '0.8.22',
+        version: '0.8.23',
         settings: {
           optimizer: {
             enabled: true,

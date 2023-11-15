@@ -1,5 +1,5 @@
 {
-  "name": "clober-solidity-template",
+  "name": "coupon-periphery",
   "version": "1.0.0",
   "description": "",
   "scripts": {
@@ -18,10 +18,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/clober-dex/clober-solidity-template.git"
+    "url": "git+https://github.com/clober-dex/coupon-periphery.git"
   },
   "bugs": {
-    "url": "https://github.com/clober-dex/clober-solidity-template/issues"
+    "url": "https://github.com/clober-dex/coupon-periphery/issues"
   },
   "keywords": [],
   "author": "",
