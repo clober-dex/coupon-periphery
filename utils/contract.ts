@@ -1,7 +1,4 @@
-import {
-  ContractName,
-  GetContractReturnType,
-} from '@nomicfoundation/hardhat-viem/types'
+import { ContractName, GetContractReturnType } from '@nomicfoundation/hardhat-viem/types'
 
 import { getHRE } from './misc'
 
@@ -13,10 +10,6 @@ export const getDeployedContract = async <CN extends string>(
 
   return hre.viem.getContractAt<CN>(
     contractName,
-    `0x${
-      deployments.address.startsWith('0x')
-        ? deployments.address.slice(2)
-        : deployments.address
-    }`,
+    `0x${deployments.address.startsWith('0x') ? deployments.address.slice(2) : deployments.address}`,
   )
 }

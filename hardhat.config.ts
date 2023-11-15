@@ -9,7 +9,7 @@ import 'hardhat-gas-reporter'
 import 'hardhat-contract-sizer'
 import 'hardhat-abi-exporter'
 
-import './task/index.ts'
+import './task/index'
 import { HardhatConfig } from 'hardhat/types'
 import * as networkInfos from 'viem/chains'
 
@@ -30,11 +30,7 @@ const loadPrivateKeyFromKeyfile = () => {
     if (arg === '--network') {
       network = parseInt(process.argv[parseInt(i) + 1])
       if (network.toString() in chainIdMap && ok !== 'Y') {
-        ok = readlineSync.question(
-          `You are trying to use ${
-            chainIdMap[network.toString()]
-          } network [Y/n] : `,
-        )
+        ok = readlineSync.question(`You are trying to use ${chainIdMap[network.toString()]} network [Y/n] : `)
         if (ok !== 'Y') {
           throw new Error('Network not allowed')
         }
@@ -42,10 +38,7 @@ const loadPrivateKeyFromKeyfile = () => {
     }
   }
 
-  const prodNetworks = new Set<number>([
-    networkInfos.mainnet.id,
-    networkInfos.arbitrum.id,
-  ])
+  const prodNetworks = new Set<number>([networkInfos.mainnet.id, networkInfos.arbitrum.id])
   if (network && prodNetworks.has(network)) {
     if (privateKey) {
       return privateKey
@@ -58,11 +51,9 @@ const loadPrivateKeyFromKeyfile = () => {
     })
     if (PASSWORD !== '') {
       const keyObject = JSON.parse(fs.readFileSync(KEYSTORE).toString())
-      privateKey =
-        '0x' + keythereum.recover(PASSWORD, keyObject).toString('hex')
+      privateKey = '0x' + keythereum.recover(PASSWORD, keyObject).toString('hex')
     } else {
-      privateKey =
-        '0x0000000000000000000000000000000000000000000000000000000000000001'
+      privateKey = '0x0000000000000000000000000000000000000000000000000000000000000001'
     }
     return privateKey
   }
@@ -145,8 +136,7 @@ const config: HardhatConfig = {
         },
       },
       accounts: {
-        mnemonic:
-          'loop curious foster tank depart vintage regret net frozen version expire vacant there zebra world',
+        mnemonic: 'loop curious foster tank depart vintage regret net frozen version expire vacant there zebra world',
         initialIndex: 0,
         count: 10,
         path: "m/44'/60'/0'/0",
