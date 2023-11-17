@@ -7,8 +7,9 @@ import {IERC1155MetadataURI} from "@openzeppelin/contracts/token/ERC1155/extensi
 import {CouponKey} from "../libraries/CouponKey.sol";
 import {Coupon} from "../libraries/Coupon.sol";
 import {Epoch} from "../libraries/Epoch.sol";
+import {IERC1155Permit} from "./IERC1155Permit.sol";
 
-interface ICouponManager is IERC1155MetadataURI {
+interface ICouponManager is IERC1155MetadataURI, IERC1155Permit {
     error InvalidAccess();
 
     // View Functions //
