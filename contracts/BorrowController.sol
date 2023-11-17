@@ -13,8 +13,6 @@ import {Epoch, EpochLibrary} from "./libraries/Epoch.sol";
 import {Controller} from "./libraries/Controller.sol";
 import {IPositionLocker} from "./interfaces/IPositionLocker.sol";
 
-import "forge-std/console.sol";
-
 contract BorrowController is IBorrowController, Controller, IPositionLocker {
     using EpochLibrary for Epoch;
 

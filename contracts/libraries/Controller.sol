@@ -25,7 +25,6 @@ import {IController} from "../interfaces/IController.sol";
 import {ReentrancyGuard} from "./ReentrancyGuard.sol";
 
 import {Epoch} from "./Epoch.sol";
-import "forge-std/console.sol";
 
 abstract contract Controller is
     IController,
