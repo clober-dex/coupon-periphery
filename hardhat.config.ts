@@ -75,34 +75,20 @@ const config: HardhatConfig = {
     ],
     overrides: {},
   },
+  etherscan: {
+    apiKey: {
+      arbitrumOne: process.env.ARBISCAN_API_KEY,
+      arbitrumGoerli: process.env.ARBISCAN_API_KEY,
+    },
+  },
   defaultNetwork: 'hardhat',
   networks: {
-    [networkInfos.mainnet.id]: {
-      url: networkInfos.mainnet.rpcUrls.default.http[0],
-      chainId: networkInfos.mainnet.id,
-      accounts: [loadPrivateKeyFromKeyfile()],
-      gas: 'auto',
-      gasPrice: 'auto',
-      gasMultiplier: 1,
-      timeout: 3000000,
-      httpHeaders: {},
-      live: true,
-      saveDeployments: true,
-      tags: ['mainnet', 'prod'],
-      companionNetworks: {},
-      verify: {
-        etherscan: {
-          apiKey: process.env.ETHERSCAN_API_KEY,
-          apiUrl: 'https://api.etherscan.io',
-        },
-      },
-    },
     [networkInfos.arbitrum.id]: {
-      url: networkInfos.arbitrum.rpcUrls.default.http[0],
+      url: process.env.ARBITRUM_NODE_URL ?? networkInfos.arbitrum.rpcUrls.default.http[0],
       chainId: networkInfos.arbitrum.id,
       accounts: [loadPrivateKeyFromKeyfile()],
       gas: 'auto',
-      gasPrice: 'auto',
+      gasPrice: 100000000,
       gasMultiplier: 1,
       timeout: 3000000,
       httpHeaders: {},
