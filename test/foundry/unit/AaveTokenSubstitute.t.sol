@@ -40,11 +40,12 @@ contract AaveTokenSubstituteUnitTest is Test, ERC1155Holder {
         usdc = IERC20(Constants.USDC);
 
         vm.startPrank(Constants.USDC_MINTER);
-        Constants.USDC.call(
+        (bool success,) = Constants.USDC.call(
             abi.encodePacked(
                 bytes4(keccak256("mint(address,uint256)")), abi.encode(address(this), usdc.amount(23_000_000))
             )
         );
+        require(success);
         vm.stopPrank();
 
         vm.startPrank(Constants.USDC_WHALE);

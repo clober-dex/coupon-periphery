@@ -15,8 +15,10 @@ import {Controller} from "./libraries/Controller.sol";
 import {IPositionLocker} from "./interfaces/IPositionLocker.sol";
 import {IRepayAdapter} from "./interfaces/IRepayAdapter.sol";
 import {Epoch, EpochLibrary} from "./libraries/Epoch.sol";
+import {PermitSignature, PermitParamsLibrary} from "./libraries/PermitParams.sol";
 
 contract RepayAdapter is IRepayAdapter, Controller, IPositionLocker {
+    using PermitParamsLibrary for PermitSignature;
     using EpochLibrary for Epoch;
 
     ILoanPositionManager private immutable _loanPositionManager;
@@ -125,7 +127,7 @@ contract RepayAdapter is IRepayAdapter, Controller, IPositionLocker {
         bytes memory swapData,
         PermitSignature calldata positionPermitParams
     ) external nonReentrant onlyPositionOwner(positionId) {
-        _permitERC721(_loanPositionManager, positionId, positionPermitParams);
+        positionPermitParams.tryPermitERC721(_loanPositionManager, positionId, address(this));
         _loanPositionManager.lock(abi.encode(positionId, msg.sender, sellCollateralAmount, minRepayAmount, swapData));
     }
 

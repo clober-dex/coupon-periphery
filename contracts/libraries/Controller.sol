@@ -150,22 +150,8 @@ abstract contract Controller is
         }
     }
 
-    function _permitERC20(address token, ERC20PermitParams calldata p) internal {
-        if (p.signature.deadline > 0) {
-            try IERC20Permit(ISubstitute(token).underlyingToken()).permit(
-                msg.sender,
-                address(this),
-                p.permitAmount,
-                p.signature.deadline,
-                p.signature.v,
-                p.signature.r,
-                p.signature.s
-            ) {} catch {}
-        }
-    }
-
-    function _permitERC721(IERC721Permit permitNFT, uint256 positionId, PermitSignature calldata p) internal {
-        if (p.deadline > 0) try permitNFT.permit(address(this), positionId, p.deadline, p.v, p.r, p.s) {} catch {}
+    function _getUnderlyingToken(address substitute) internal view returns (address) {
+        return ISubstitute(substitute).underlyingToken();
     }
 
     function _burnAllSubstitute(address substitute, address to) internal {

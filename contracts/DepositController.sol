@@ -13,8 +13,10 @@ import {Epoch, EpochLibrary} from "./libraries/Epoch.sol";
 import {CouponKey} from "./libraries/CouponKey.sol";
 import {Coupon} from "./libraries/Coupon.sol";
 import {Controller} from "./libraries/Controller.sol";
+import {ERC20PermitParams, PermitSignature, PermitParamsLibrary} from "./libraries/PermitParams.sol";
 
 contract DepositController is IDepositController, Controller, IPositionLocker {
+    using PermitParamsLibrary for *;
     using EpochLibrary for Epoch;
 
     IBondPositionManager private immutable _bondPositionManager;
@@ -89,7 +91,7 @@ contract DepositController is IDepositController, Controller, IPositionLocker {
         uint256 minEarnInterest,
         ERC20PermitParams calldata tokenPermitParams
     ) external payable nonReentrant wrapETH {
-        _permitERC20(asset, tokenPermitParams);
+        tokenPermitParams.tryPermit(_getUnderlyingToken(asset), msg.sender, address(this));
         bytes memory lockData = abi.encode(amount, EpochLibrary.current().add(lockEpochs - 1), 0, minEarnInterest);
         bytes memory result = _bondPositionManager.lock(abi.encode(0, msg.sender, abi.encode(asset, lockData)));
         uint256 id = abi.decode(result, (uint256));
@@ -105,7 +107,7 @@ contract DepositController is IDepositController, Controller, IPositionLocker {
         uint256 maxPayInterest,
         PermitSignature calldata positionPermitParams
     ) external nonReentrant onlyPositionOwner(positionId) {
-        _permitERC721(_bondPositionManager, positionId, positionPermitParams);
+        positionPermitParams.tryPermitERC721(_bondPositionManager, positionId, address(this));
         BondPosition memory position = _bondPositionManager.getPosition(positionId);
 
         bytes memory lockData = abi.encode(position.amount - withdrawAmount, position.expiredWith, maxPayInterest, 0);
@@ -119,7 +121,7 @@ contract DepositController is IDepositController, Controller, IPositionLocker {
         nonReentrant
         onlyPositionOwner(positionId)
     {
-        _permitERC721(_bondPositionManager, positionId, positionPermitParams);
+        positionPermitParams.tryPermitERC721(_bondPositionManager, positionId, address(this));
         BondPosition memory position = _bondPositionManager.getPosition(positionId);
         if (position.expiredWith >= EpochLibrary.current()) revert NotExpired();
 

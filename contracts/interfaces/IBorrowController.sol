@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import {IController} from "./IController.sol";
+import {ERC20PermitParams, PermitSignature} from "../libraries/PermitParams.sol";
 
 interface IBorrowController is IController {
     error CollateralSwapFailed(string reason);

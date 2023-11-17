@@ -18,7 +18,6 @@ import {IAssetPool} from "../../../contracts/interfaces/IAssetPool.sol";
 import {IAaveTokenSubstitute} from "../../../contracts/interfaces/IAaveTokenSubstitute.sol";
 import {ICouponOracle} from "../../../contracts/interfaces/ICouponOracle.sol";
 import {ICouponManager} from "../../../contracts/interfaces/ICouponManager.sol";
-import {IController} from "../../../contracts/interfaces/IController.sol";
 import {IERC721Permit} from "../../../contracts/interfaces/IERC721Permit.sol";
 import {ILoanPositionManager, ILoanPositionManagerTypes} from "../../../contracts/interfaces/ILoanPositionManager.sol";
 import {Coupon, CouponLibrary} from "../../../contracts/libraries/Coupon.sol";
@@ -26,6 +25,7 @@ import {CouponKey, CouponKeyLibrary} from "../../../contracts/libraries/CouponKe
 import {Epoch, EpochLibrary} from "../../../contracts/libraries/Epoch.sol";
 import {LoanPosition} from "../../../contracts/libraries/LoanPosition.sol";
 import {Wrapped1155MetadataBuilder} from "../../../contracts/libraries/Wrapped1155MetadataBuilder.sol";
+import {ERC20PermitParams, PermitSignature} from "../../../contracts/libraries/PermitParams.sol";
 import {IWrapped1155Factory} from "../../../contracts/external/wrapped1155/IWrapped1155Factory.sol";
 import {CloberMarketFactory} from "../../../contracts/external/clober/CloberMarketFactory.sol";
 import {CloberMarketSwapCallbackReceiver} from "../../../contracts/external/clober/CloberMarketSwapCallbackReceiver.sol";
@@ -58,8 +58,8 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
     address public wausdc;
     address public waweth;
     address public user;
-    IController.ERC20PermitParams public emptyERC20PermitParams;
-    IController.PermitSignature public emptyERC721PermitParams;
+    ERC20PermitParams public emptyERC20PermitParams;
+    PermitSignature public emptyERC721PermitParams;
 
     CouponKey[] public couponKeys;
     address[] public wrappedCoupons;
@@ -196,7 +196,7 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         uint8 loanEpochs
     ) internal returns (uint256 positionId) {
         positionId = loanPositionManager.nextId();
-        IController.ERC20PermitParams memory permitParams = _buildERC20PermitParams(
+        ERC20PermitParams memory permitParams = _buildERC20PermitParams(
             1, AaveTokenSubstitute(payable(collateralToken)), address(borrowController), collateralAmount
         );
         vm.prank(borrower);
@@ -277,7 +277,7 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         IAaveTokenSubstitute substitute,
         address spender,
         uint256 amount
-    ) internal view returns (IController.ERC20PermitParams memory) {
+    ) internal view returns (ERC20PermitParams memory) {
         IERC20Permit token = IERC20Permit(substitute.underlyingToken());
         address owner = vm.addr(privateKey);
         bytes32 structHash = keccak256(
@@ -285,19 +285,19 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         );
         bytes32 hash = MessageHashUtils.toTypedDataHash(token.DOMAIN_SEPARATOR(), structHash);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, hash);
-        return IController.ERC20PermitParams(amount, IController.PermitSignature(block.timestamp + 1, v, r, s));
+        return ERC20PermitParams(amount, PermitSignature(block.timestamp + 1, v, r, s));
     }
 
     function _buildERC721PermitParams(uint256 privateKey, IERC721Permit token, address spender, uint256 tokenId)
         internal
         view
-        returns (IController.PermitSignature memory)
+        returns (PermitSignature memory)
     {
         bytes32 structHash =
             keccak256(abi.encode(token.PERMIT_TYPEHASH(), spender, tokenId, token.nonces(tokenId), block.timestamp + 1));
         bytes32 hash = MessageHashUtils.toTypedDataHash(token.DOMAIN_SEPARATOR(), structHash);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, hash);
-        return IController.PermitSignature(block.timestamp + 1, v, r, s);
+        return PermitSignature(block.timestamp + 1, v, r, s);
     }
 
     function assertEq(Epoch e1, Epoch e2, string memory err) internal {
