@@ -9,16 +9,14 @@ import {IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/I
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 import {Constants} from "../Constants.sol";
-import {ForkUtils, ERC20Utils, Utils} from "../Utils.sol";
+import {ForkUtils, ERC20Utils, Utils, PermitSignLibrary} from "../Utils.sol";
 import {IAssetPool} from "../../../contracts/interfaces/IAssetPool.sol";
 import {ICouponOracle} from "../../../contracts/interfaces/ICouponOracle.sol";
 import {ICouponManager} from "../../../contracts/interfaces/ICouponManager.sol";
 import {IAaveTokenSubstitute} from "../../../contracts/interfaces/IAaveTokenSubstitute.sol";
-import {IERC721Permit} from "../../../contracts/interfaces/IERC721Permit.sol";
 import {ILoanPositionManager, ILoanPositionManagerTypes} from "../../../contracts/interfaces/ILoanPositionManager.sol";
 import {Coupon, CouponLibrary} from "../../../contracts/libraries/Coupon.sol";
 import {CouponKey, CouponKeyLibrary} from "../../../contracts/libraries/CouponKey.sol";
@@ -40,10 +38,9 @@ contract LeverageAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceive
     using ERC20Utils for IERC20;
     using CouponKeyLibrary for CouponKey;
     using EpochLibrary for Epoch;
+    using PermitSignLibrary for Vm;
 
     address public constant MARKET_MAKER = address(999123);
-    bytes32 private constant _ERC20_PERMIT_TYPEHASH =
-        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
     IAssetPool public assetPool;
     BorrowController public borrowController;
@@ -202,8 +199,11 @@ contract LeverageAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceive
         uint16 loanEpochs
     ) internal returns (uint256 positionId) {
         positionId = loanPositionManager.nextId();
-        ERC20PermitParams memory permitParams = _buildERC20PermitParams(
-            1, AaveTokenSubstitute(payable(collateralToken)), address(borrowController), collateralAmount
+        ERC20PermitParams memory permitParams = vm.signERC20Permit(
+            1,
+            IERC20Permit(AaveTokenSubstitute(payable(collateralToken)).underlyingToken()),
+            address(borrowController),
+            collateralAmount
         );
         vm.prank(borrower);
         borrowController.borrow(
@@ -220,8 +220,12 @@ contract LeverageAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceive
         uint256 beforeETHBalance = user.balance;
 
         uint256 positionId = loanPositionManager.nextId();
-        ERC20PermitParams memory permitParams =
-            _buildERC20PermitParams(1, AaveTokenSubstitute(payable(wausdc)), address(leverageAdapter), collateralAmount);
+        ERC20PermitParams memory permitParams = vm.signERC20Permit(
+            1,
+            IERC20Permit(AaveTokenSubstitute(payable(wausdc)).underlyingToken()),
+            address(leverageAdapter),
+            collateralAmount
+        );
 
         bytes memory data = fromHex(
             string.concat(
@@ -264,11 +268,15 @@ contract LeverageAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceive
         uint256 collateralAmount = 0.4 ether;
         uint256 borrowAmount = usdc.amount(550);
 
-        ERC20PermitParams memory permitParams =
-            _buildERC20PermitParams(1, AaveTokenSubstitute(payable(wausdc)), address(leverageAdapter), collateralAmount);
+        ERC20PermitParams memory permitParams = vm.signERC20Permit(
+            1,
+            IERC20Permit(AaveTokenSubstitute(payable(wausdc)).underlyingToken()),
+            address(leverageAdapter),
+            collateralAmount
+        );
 
         PermitSignature memory permit721Params =
-            _buildERC721PermitParams(1, IERC721Permit(loanPositionManager), address(leverageAdapter), positionId);
+            vm.signERC721Permit(1, loanPositionManager, address(leverageAdapter), positionId);
 
         bytes memory data = fromHex(
             string.concat(
@@ -327,34 +335,6 @@ contract LeverageAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceive
 
     function remove0x(string calldata s) external pure returns (string memory) {
         return s[2:];
-    }
-
-    function _buildERC20PermitParams(
-        uint256 privateKey,
-        IAaveTokenSubstitute substitute,
-        address spender,
-        uint256 amount
-    ) internal view returns (ERC20PermitParams memory) {
-        IERC20Permit token = IERC20Permit(substitute.underlyingToken());
-        address owner = vm.addr(privateKey);
-        bytes32 structHash = keccak256(
-            abi.encode(_ERC20_PERMIT_TYPEHASH, owner, spender, amount, token.nonces(owner), block.timestamp + 1)
-        );
-        bytes32 hash = MessageHashUtils.toTypedDataHash(token.DOMAIN_SEPARATOR(), structHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, hash);
-        return ERC20PermitParams(amount, PermitSignature(block.timestamp + 1, v, r, s));
-    }
-
-    function _buildERC721PermitParams(uint256 privateKey, IERC721Permit token, address spender, uint256 tokenId)
-        internal
-        view
-        returns (PermitSignature memory)
-    {
-        bytes32 structHash =
-            keccak256(abi.encode(token.PERMIT_TYPEHASH(), spender, tokenId, token.nonces(tokenId), block.timestamp + 1));
-        bytes32 hash = MessageHashUtils.toTypedDataHash(token.DOMAIN_SEPARATOR(), structHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, hash);
-        return PermitSignature(block.timestamp + 1, v, r, s);
     }
 
     function assertEq(Epoch e1, Epoch e2, string memory err) internal {
