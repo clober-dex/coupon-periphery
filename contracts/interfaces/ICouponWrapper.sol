@@ -4,11 +4,19 @@ pragma solidity ^0.8.0;
 
 import {ERC20PermitParams, PermitSignature} from "../libraries/PermitParams.sol";
 import {Coupon} from "../libraries/Coupon.sol";
+import {CouponKey} from "../libraries/CouponKey.sol";
 
 interface ICouponWrapper {
-    function getWrappedCoupon(Coupon calldata coupon) external view returns (address wrappedCoupon);
+    function getWrappedCoupon(CouponKey calldata couponKey) external view returns (address wrappedCoupon);
 
-    function getWrappedCoupons(Coupon[] calldata coupons) external view returns (address[] memory wrappedCoupons);
+    function getWrappedCoupons(CouponKey[] calldata couponKeys)
+        external
+        view
+        returns (address[] memory wrappedCoupons);
+
+    function buildMetadata(CouponKey calldata couponKey) external view returns (bytes memory metadata);
+
+    function buildBatchMetadata(CouponKey[] calldata couponKeys) external view returns (bytes memory metadata);
 
     function wrap(Coupon[] calldata coupons, address recipient) external;
 

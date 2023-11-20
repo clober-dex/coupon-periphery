@@ -15,6 +15,7 @@ import {ICouponManager} from "../../../contracts/interfaces/ICouponManager.sol";
 import {IERC1155Permit} from "../../../contracts/interfaces/IERC1155Permit.sol";
 import {Epoch, EpochLibrary} from "../../../contracts/libraries/Epoch.sol";
 import {Coupon, CouponLibrary} from "../../../contracts/libraries/Coupon.sol";
+import {CouponKey} from "../../../contracts/libraries/CouponKey.sol";
 import {Wrapped1155MetadataBuilder} from "../../../contracts/libraries/Wrapped1155MetadataBuilder.sol";
 import {ERC20PermitParams} from "../../../contracts/libraries/PermitParams.sol";
 import {CouponWrapper} from "../../../contracts/CouponWrapper.sol";
@@ -63,12 +64,32 @@ contract CouponWrapperUnitTest is Test, ERC1155Holder {
 
     function testGetWrappedCoupon() public {
         for (uint256 i; i < coupons.length; ++i) {
-            assertEq(couponWrapper.getWrappedCoupon(coupons[i]), wrappedCoupons[i]);
+            assertEq(couponWrapper.getWrappedCoupon(coupons[i].key), wrappedCoupons[i]);
         }
     }
 
     function testGetWrappedCoupons() public {
-        assertEq(couponWrapper.getWrappedCoupons(coupons), wrappedCoupons);
+        CouponKey[] memory keys = new CouponKey[](coupons.length);
+        for (uint256 i; i < coupons.length; ++i) {
+            keys[i] = coupons[i].key;
+        }
+        assertEq(couponWrapper.getWrappedCoupons(keys), wrappedCoupons);
+    }
+
+    function testBuildMetadata() public {
+        for (uint256 i; i < coupons.length; ++i) {
+            assertEq(couponWrapper.buildMetadata(coupons[i].key), metadata[i]);
+        }
+    }
+
+    function testBuildBatchMetadata() public {
+        CouponKey[] memory keys = new CouponKey[](coupons.length);
+        bytes memory batchMetadata;
+        for (uint256 i; i < coupons.length; ++i) {
+            keys[i] = coupons[i].key;
+            batchMetadata = bytes.concat(batchMetadata, metadata[i]);
+        }
+        assertEq(couponWrapper.buildBatchMetadata(keys), batchMetadata);
     }
 
     function testWrap() public {

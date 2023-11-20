@@ -25,6 +25,14 @@ library Wrapped1155MetadataBuilder {
         return abi.encodePacked(nameData, symbolData, bytes1(IERC20Metadata(couponKey.asset).decimals()));
     }
 
+    function buildWrapped1155BatchMetadata(CouponKey[] memory couponKeys) internal view returns (bytes memory data) {
+        unchecked {
+            for (uint256 i = 0; i < couponKeys.length; ++i) {
+                data = bytes.concat(data, buildWrapped1155Metadata(couponKeys[i]));
+            }
+        }
+    }
+
     function buildWrapped1155BatchMetadata(Coupon[] memory coupons) internal view returns (bytes memory data) {
         unchecked {
             for (uint256 i = 0; i < coupons.length; ++i) {

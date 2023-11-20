@@ -9,12 +9,14 @@ import {ICouponManager} from "./interfaces/ICouponManager.sol";
 import {ICouponWrapper} from "./interfaces/ICouponWrapper.sol";
 import {IWrapped1155Factory} from "./external/wrapped1155/IWrapped1155Factory.sol";
 import {CouponLibrary, Coupon} from "./libraries/Coupon.sol";
+import {CouponKeyLibrary, CouponKey} from "./libraries/CouponKey.sol";
 import {PermitParamsLibrary, ERC20PermitParams, PermitSignature} from "./libraries/PermitParams.sol";
 import {Wrapped1155MetadataBuilder} from "./libraries/Wrapped1155MetadataBuilder.sol";
 
 contract CouponWrapper is ICouponWrapper {
     using SafeERC20 for IERC20;
     using CouponLibrary for Coupon;
+    using CouponKeyLibrary for CouponKey;
     using PermitParamsLibrary for *;
 
     ICouponManager private immutable _couponManager;
@@ -25,21 +27,33 @@ contract CouponWrapper is ICouponWrapper {
         _wrapped1155Factory = IWrapped1155Factory(wrapped1155Factory_);
     }
 
-    function getWrappedCoupon(Coupon calldata coupon) external view returns (address) {
+    function getWrappedCoupon(CouponKey calldata couponKey) external view returns (address) {
         return _wrapped1155Factory.getWrapped1155(
-            address(_couponManager), coupon.id(), Wrapped1155MetadataBuilder.buildWrapped1155Metadata(coupon.key)
+            address(_couponManager), couponKey.toId(), Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKey)
         );
     }
 
-    function getWrappedCoupons(Coupon[] calldata coupons) external view returns (address[] memory wrappedCoupons) {
-        wrappedCoupons = new address[](coupons.length);
-        for (uint256 i; i < coupons.length; ++i) {
+    function getWrappedCoupons(CouponKey[] calldata couponKeys)
+        external
+        view
+        returns (address[] memory wrappedCoupons)
+    {
+        wrappedCoupons = new address[](couponKeys.length);
+        for (uint256 i; i < couponKeys.length; ++i) {
             wrappedCoupons[i] = _wrapped1155Factory.getWrapped1155(
                 address(_couponManager),
-                coupons[i].id(),
-                Wrapped1155MetadataBuilder.buildWrapped1155Metadata(coupons[i].key)
+                couponKeys[i].toId(),
+                Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKeys[i])
             );
         }
+    }
+
+    function buildMetadata(CouponKey calldata couponKey) external view returns (bytes memory) {
+        return Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKey);
+    }
+
+    function buildBatchMetadata(CouponKey[] calldata couponKeys) external view returns (bytes memory) {
+        return Wrapped1155MetadataBuilder.buildWrapped1155BatchMetadata(couponKeys);
     }
 
     function wrap(Coupon[] calldata coupons, address recipient) external {
