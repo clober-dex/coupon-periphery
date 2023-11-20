@@ -61,6 +61,16 @@ contract CouponWrapperUnitTest is Test, ERC1155Holder {
         }
     }
 
+    function testGetWrappedCoupon() public {
+        for (uint256 i; i < coupons.length; ++i) {
+            assertEq(couponWrapper.getWrappedCoupon(coupons[i]), wrappedCoupons[i]);
+        }
+    }
+
+    function testGetWrappedCoupons() public {
+        assertEq(couponWrapper.getWrappedCoupons(coupons), wrappedCoupons);
+    }
+
     function testWrap() public {
         vm.startPrank(user);
         couponManager.setApprovalForAll(address(couponWrapper), true);

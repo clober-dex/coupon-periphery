@@ -6,6 +6,10 @@ import {ERC20PermitParams, PermitSignature} from "../libraries/PermitParams.sol"
 import {Coupon} from "../libraries/Coupon.sol";
 
 interface ICouponWrapper {
+    function getWrappedCoupon(Coupon calldata coupon) external view returns (address wrappedCoupon);
+
+    function getWrappedCoupons(Coupon[] calldata coupons) external view returns (address[] memory wrappedCoupons);
+
     function wrap(Coupon[] calldata coupons, address recipient) external;
 
     function wrapWithPermit(

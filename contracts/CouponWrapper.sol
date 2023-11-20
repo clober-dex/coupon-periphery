@@ -25,6 +25,23 @@ contract CouponWrapper is ICouponWrapper {
         _wrapped1155Factory = IWrapped1155Factory(wrapped1155Factory_);
     }
 
+    function getWrappedCoupon(Coupon calldata coupon) external view returns (address) {
+        return _wrapped1155Factory.getWrapped1155(
+            address(_couponManager), coupon.id(), Wrapped1155MetadataBuilder.buildWrapped1155Metadata(coupon.key)
+        );
+    }
+
+    function getWrappedCoupons(Coupon[] calldata coupons) external view returns (address[] memory wrappedCoupons) {
+        wrappedCoupons = new address[](coupons.length);
+        for (uint256 i; i < coupons.length; ++i) {
+            wrappedCoupons[i] = _wrapped1155Factory.getWrapped1155(
+                address(_couponManager),
+                coupons[i].id(),
+                Wrapped1155MetadataBuilder.buildWrapped1155Metadata(coupons[i].key)
+            );
+        }
+    }
+
     function wrap(Coupon[] calldata coupons, address recipient) external {
         _wrap(coupons, recipient);
     }
