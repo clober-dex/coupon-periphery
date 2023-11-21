@@ -5,9 +5,14 @@ pragma solidity ^0.8.0;
 import "forge-std/Test.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
+import {IERC1155Permit} from "../../contracts/interfaces/IERC1155Permit.sol";
+import {IERC721Permit} from "../../contracts/interfaces/IERC721Permit.sol";
 import {Coupon} from "../../contracts/libraries/Coupon.sol";
+import {ERC20PermitParams, PermitSignature} from "../../contracts/libraries/PermitParams.sol";
 
 library ERC20Utils {
     function amount(IERC20 token, uint256 ethers) internal view returns (uint256) {
@@ -85,5 +90,50 @@ library ForkUtils {
         uint256 newFork = vm.createFork(vm.envString("FORK_URL"));
         vm.selectFork(newFork);
         vm.rollFork(blockNumber);
+    }
+}
+
+library PermitSignLibrary {
+    bytes32 private constant _ERC20_PERMIT_TYPEHASH =
+        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+
+    function signERC20Permit(Vm vm, uint256 privateKey, IERC20Permit token, address spender, uint256 amount)
+        internal
+        view
+        returns (ERC20PermitParams memory)
+    {
+        address owner = vm.addr(privateKey);
+        bytes32 structHash = keccak256(
+            abi.encode(_ERC20_PERMIT_TYPEHASH, owner, spender, amount, token.nonces(owner), block.timestamp + 1)
+        );
+        bytes32 hash = MessageHashUtils.toTypedDataHash(token.DOMAIN_SEPARATOR(), structHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, hash);
+        return ERC20PermitParams(amount, PermitSignature(block.timestamp + 1, v, r, s));
+    }
+
+    function signERC721Permit(Vm vm, uint256 privateKey, IERC721Permit token, address spender, uint256 tokenId)
+        internal
+        view
+        returns (PermitSignature memory)
+    {
+        bytes32 structHash =
+            keccak256(abi.encode(token.PERMIT_TYPEHASH(), spender, tokenId, token.nonces(tokenId), block.timestamp + 1));
+        bytes32 hash = MessageHashUtils.toTypedDataHash(token.DOMAIN_SEPARATOR(), structHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, hash);
+        return PermitSignature(block.timestamp + 1, v, r, s);
+    }
+
+    function signERC1155Permit(Vm vm, uint256 privateKey, IERC1155Permit token, address spender, bool approved)
+        internal
+        view
+        returns (PermitSignature memory)
+    {
+        address owner = vm.addr(privateKey);
+        bytes32 structHash = keccak256(
+            abi.encode(token.PERMIT_TYPEHASH(), owner, spender, approved, token.nonces(owner), block.timestamp + 1)
+        );
+        bytes32 hash = MessageHashUtils.toTypedDataHash(token.DOMAIN_SEPARATOR(), structHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, hash);
+        return PermitSignature(block.timestamp + 1, v, r, s);
     }
 }

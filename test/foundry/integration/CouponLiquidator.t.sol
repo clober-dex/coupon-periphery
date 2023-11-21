@@ -9,23 +9,21 @@ import {IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/I
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 import {Constants} from "../Constants.sol";
-import {ForkUtils, ERC20Utils, Utils} from "../Utils.sol";
+import {ForkUtils, ERC20Utils, Utils, PermitSignLibrary} from "../Utils.sol";
 import {IAssetPool} from "../../../contracts/interfaces/IAssetPool.sol";
 import {IAaveTokenSubstitute} from "../../../contracts/interfaces/IAaveTokenSubstitute.sol";
 import {ICouponOracle} from "../../../contracts/interfaces/ICouponOracle.sol";
 import {ICouponManager} from "../../../contracts/interfaces/ICouponManager.sol";
-import {IController} from "../../../contracts/interfaces/IController.sol";
-import {IERC721Permit} from "../../../contracts/interfaces/IERC721Permit.sol";
 import {ILoanPositionManager, ILoanPositionManagerTypes} from "../../../contracts/interfaces/ILoanPositionManager.sol";
 import {Coupon, CouponLibrary} from "../../../contracts/libraries/Coupon.sol";
 import {CouponKey, CouponKeyLibrary} from "../../../contracts/libraries/CouponKey.sol";
 import {Epoch, EpochLibrary} from "../../../contracts/libraries/Epoch.sol";
 import {LoanPosition} from "../../../contracts/libraries/LoanPosition.sol";
 import {Wrapped1155MetadataBuilder} from "../../../contracts/libraries/Wrapped1155MetadataBuilder.sol";
+import {ERC20PermitParams, PermitSignature} from "../../../contracts/libraries/PermitParams.sol";
 import {IWrapped1155Factory} from "../../../contracts/external/wrapped1155/IWrapped1155Factory.sol";
 import {CloberMarketFactory} from "../../../contracts/external/clober/CloberMarketFactory.sol";
 import {CloberMarketSwapCallbackReceiver} from "../../../contracts/external/clober/CloberMarketSwapCallbackReceiver.sol";
@@ -40,10 +38,9 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
     using ERC20Utils for IERC20;
     using CouponKeyLibrary for CouponKey;
     using EpochLibrary for Epoch;
+    using PermitSignLibrary for Vm;
 
     address public constant MARKET_MAKER = address(999123);
-    bytes32 private constant _ERC20_PERMIT_TYPEHASH =
-        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
     IAssetPool public assetPool;
     BorrowController public borrowController;
@@ -58,8 +55,6 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
     address public wausdc;
     address public waweth;
     address public user;
-    IController.ERC20PermitParams public emptyERC20PermitParams;
-    IController.PermitSignature public emptyERC721PermitParams;
 
     CouponKey[] public couponKeys;
     address[] public wrappedCoupons;
@@ -196,8 +191,11 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         uint8 loanEpochs
     ) internal returns (uint256 positionId) {
         positionId = loanPositionManager.nextId();
-        IController.ERC20PermitParams memory permitParams = _buildERC20PermitParams(
-            1, AaveTokenSubstitute(payable(collateralToken)), address(borrowController), collateralAmount
+        ERC20PermitParams memory permitParams = vm.signERC20Permit(
+            1,
+            IERC20Permit(AaveTokenSubstitute(payable(collateralToken)).underlyingToken()),
+            address(borrowController),
+            collateralAmount
         );
         vm.prank(borrower);
         borrowController.borrow(
@@ -270,34 +268,6 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
 
     function remove0x(string calldata s) external pure returns (string memory) {
         return s[2:];
-    }
-
-    function _buildERC20PermitParams(
-        uint256 privateKey,
-        IAaveTokenSubstitute substitute,
-        address spender,
-        uint256 amount
-    ) internal view returns (IController.ERC20PermitParams memory) {
-        IERC20Permit token = IERC20Permit(substitute.underlyingToken());
-        address owner = vm.addr(privateKey);
-        bytes32 structHash = keccak256(
-            abi.encode(_ERC20_PERMIT_TYPEHASH, owner, spender, amount, token.nonces(owner), block.timestamp + 1)
-        );
-        bytes32 hash = MessageHashUtils.toTypedDataHash(token.DOMAIN_SEPARATOR(), structHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, hash);
-        return IController.ERC20PermitParams(amount, IController.PermitSignature(block.timestamp + 1, v, r, s));
-    }
-
-    function _buildERC721PermitParams(uint256 privateKey, IERC721Permit token, address spender, uint256 tokenId)
-        internal
-        view
-        returns (IController.PermitSignature memory)
-    {
-        bytes32 structHash =
-            keccak256(abi.encode(token.PERMIT_TYPEHASH(), spender, tokenId, token.nonces(tokenId), block.timestamp + 1));
-        bytes32 hash = MessageHashUtils.toTypedDataHash(token.DOMAIN_SEPARATOR(), structHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, hash);
-        return IController.PermitSignature(block.timestamp + 1, v, r, s);
     }
 
     function assertEq(Epoch e1, Epoch e2, string memory err) internal {

@@ -15,8 +15,10 @@ import {Controller} from "./libraries/Controller.sol";
 import {IPositionLocker} from "./interfaces/IPositionLocker.sol";
 import {ILeverageAdapter} from "./interfaces/ILeverageAdapter.sol";
 import {Epoch, EpochLibrary} from "./libraries/Epoch.sol";
+import {ERC20PermitParams, PermitSignature, PermitParamsLibrary} from "./libraries/PermitParams.sol";
 
 contract LeverageAdapter is ILeverageAdapter, Controller, IPositionLocker {
+    using PermitParamsLibrary for *;
     using EpochLibrary for Epoch;
 
     ILoanPositionManager private immutable _loanPositionManager;
@@ -116,7 +118,7 @@ contract LeverageAdapter is ILeverageAdapter, Controller, IPositionLocker {
         bytes memory swapData,
         ERC20PermitParams calldata collateralPermitParams
     ) external payable nonReentrant wrapETH {
-        _permitERC20(collateralToken, collateralPermitParams);
+        collateralPermitParams.tryPermit(_getUnderlyingToken(collateralToken), msg.sender, address(this));
 
         bytes memory lockData =
             abi.encode(collateralAmount, borrowAmount, EpochLibrary.current().add(loanEpochs - 1), maxPayInterest, 0);
@@ -140,8 +142,8 @@ contract LeverageAdapter is ILeverageAdapter, Controller, IPositionLocker {
     ) external payable nonReentrant wrapETH onlyPositionOwner(positionId) {
         LoanPosition memory position = _loanPositionManager.getPosition(positionId);
 
-        _permitERC20(position.collateralToken, collateralPermitParams);
-        _permitERC721(_loanPositionManager, positionId, positionPermitParams);
+        collateralPermitParams.tryPermit(_getUnderlyingToken(position.collateralToken), msg.sender, address(this));
+        positionPermitParams.tryPermitERC721(_loanPositionManager, positionId, address(this));
 
         position.collateralAmount += collateralAmount;
         position.debtAmount += debtAmount;
