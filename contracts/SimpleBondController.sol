@@ -46,6 +46,11 @@ contract SimpleBondController is IPositionLocker, ERC1155Holder, ISimpleBondCont
         _couponManager.setApprovalForAll(address(_couponWrapper), true);
     }
 
+    modifier wrapETH() {
+        if (address(this).balance > 0) _weth.deposit{value: address(this).balance}();
+        _;
+    }
+
     function positionLockAcquired(bytes calldata data) external returns (bytes memory result) {
         if (msg.sender != address(_bondPositionManager)) revert InvalidAccess();
         (address user, uint256 tokenId, uint256 amount, Epoch expiredWith, bool wrapCoupons, address asset) =
@@ -103,9 +108,8 @@ contract SimpleBondController is IPositionLocker, ERC1155Holder, ISimpleBondCont
         uint256 amount,
         Epoch expiredWith,
         bool wrapCoupons
-    ) internal returns (uint256 positionId) {
+    ) internal wrapETH returns (uint256 positionId) {
         address underlyingToken = ISubstitute(asset).underlyingToken();
-        _checkEth(underlyingToken);
         permitParams.tryPermit(underlyingToken, msg.sender, address(this));
         bytes memory result =
             _bondPositionManager.lock(abi.encode(msg.sender, 0, amount, expiredWith, wrapCoupons, asset));
@@ -143,23 +147,14 @@ contract SimpleBondController is IPositionLocker, ERC1155Holder, ISimpleBondCont
         uint256 amount,
         Epoch expiredWith,
         bool wrapCoupons
-    ) internal {
+    ) internal wrapETH {
         positionPermitParams.tryPermitERC721(_bondPositionManager, tokenId, address(this));
         couponPermitParams.tryPermitERC1155(_couponManager, msg.sender, address(this), true);
         address asset = _bondPositionManager.getPosition(tokenId).asset;
         address underlyingToken = ISubstitute(asset).underlyingToken();
-        _checkEth(underlyingToken);
         tokenPermitParams.tryPermit(underlyingToken, msg.sender, address(this));
 
         _bondPositionManager.lock(abi.encode(msg.sender, tokenId, amount, expiredWith, wrapCoupons, asset));
-    }
-
-    function _checkEth(address underlyingToken) internal {
-        if (underlyingToken != address(_weth) && msg.value > 0) {
-            revert InvalidValueTransfer();
-        } else if (msg.value > 0) {
-            _weth.deposit{value: msg.value}();
-        }
     }
 
     function withdrawLostToken(address token, address to) external onlyOwner {
