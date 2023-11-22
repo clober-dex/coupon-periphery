@@ -62,8 +62,6 @@ contract CouponMarketRouterIntegrationTest is Test {
         couponManager.setApprovalForAll(address(wrapper), true);
         mintCoupons[0].amount = 5 ether;
         wrapper.wrap(mintCoupons, user);
-
-        wrappedCoupon.approve(address(router), type(uint256).max);
         vm.stopPrank();
     }
 
@@ -75,10 +73,9 @@ contract CouponMarketRouterIntegrationTest is Test {
         uint256 beforeBalance = user.balance;
         uint256 beforeRecipientBalance = recipient.balance;
 
+        wrappedCoupon.approve(address(router), 1 ether);
         vm.recordLogs();
-        router.marketSellCoupons(
-            _buildParams(1 ether, 1 ether), vm.signERC1155Permit(1, couponManager, address(router), true)
-        );
+        router.marketSellCoupons(_buildParams(2 ether), vm.signERC1155Permit(1, couponManager, address(router), true));
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         // Catch event TakeOrder(address indexed sender, address indexed user, uint16 priceIndex, uint64 rawAmount, uint8 options);
@@ -100,6 +97,40 @@ contract CouponMarketRouterIntegrationTest is Test {
         vm.stopPrank();
     }
 
+    function testMarketSellCouponsWhenWrappedCouponBalanceInSufficient() public {
+        vm.startPrank(user);
+
+        wrappedCoupon.transfer(address(123), wrappedCoupon.balanceOf(user) - 0.5 ether);
+        assertEq(wrappedCoupon.balanceOf(user), 0.5 ether, "BEFORE_WRAPPED_COUPON_BALANCE");
+
+        uint256 beforeCouponBalance = couponManager.balanceOf(user, couponKey.toId());
+        uint256 beforeBalance = user.balance;
+        uint256 beforeRecipientBalance = recipient.balance;
+
+        wrappedCoupon.approve(address(router), 1 ether);
+        vm.recordLogs();
+        router.marketSellCoupons(_buildParams(2 ether), vm.signERC1155Permit(1, couponManager, address(router), true));
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        // Catch event TakeOrder(address indexed sender, address indexed user, uint16 priceIndex, uint64 rawAmount, uint8 options);
+        (, uint64 rawAmount,) = abi.decode(logs[1].data, (uint16, uint64, uint8));
+        uint256 actualInputAmount = market.rawToBase(rawAmount, bestBid, true);
+        uint256 actualOutputAmount = market.rawToQuote(rawAmount) * (1e6 - market.takerFee()) / 1e6;
+
+        uint256 afterCouponBalance = couponManager.balanceOf(user, couponKey.toId());
+        uint256 afterWrappedCouponBalance = wrappedCoupon.balanceOf(user);
+        uint256 afterBalance = user.balance;
+        uint256 afterRecipientBalance = recipient.balance;
+
+        assertGe(afterCouponBalance + 1.5 ether, beforeCouponBalance, "COUPON_BALANCE");
+        assertEq(afterCouponBalance + actualInputAmount - 0.5 ether, beforeCouponBalance, "COUPON_BALANCE_ACTUAL");
+        assertEq(afterWrappedCouponBalance, 0, "WRAPPED_COUPON_BALANCE");
+        assertEq(afterBalance, beforeBalance, "USER_ETH_BALANCE");
+        assertEq(afterRecipientBalance, beforeRecipientBalance + actualOutputAmount, "RECIPIENT_ETH_BALANCE");
+
+        vm.stopPrank();
+    }
+
     function testMarketSellCouponsWithoutWrappedCoupons() public {
         vm.startPrank(user);
 
@@ -109,9 +140,7 @@ contract CouponMarketRouterIntegrationTest is Test {
         uint256 beforeRecipientBalance = recipient.balance;
 
         vm.recordLogs();
-        router.marketSellCoupons(
-            _buildParams(0, 2 ether), vm.signERC1155Permit(1, couponManager, address(router), true)
-        );
+        router.marketSellCoupons(_buildParams(2 ether), vm.signERC1155Permit(1, couponManager, address(router), true));
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         // Catch event TakeOrder(address indexed sender, address indexed user, uint16 priceIndex, uint64 rawAmount, uint8 options);
@@ -141,10 +170,9 @@ contract CouponMarketRouterIntegrationTest is Test {
         uint256 beforeBalance = user.balance;
         uint256 beforeRecipientBalance = recipient.balance;
 
+        wrappedCoupon.approve(address(router), 2 ether);
         vm.recordLogs();
-        router.marketSellCoupons(
-            _buildParams(2 ether, 0), vm.signERC1155Permit(1, couponManager, address(router), true)
-        );
+        router.marketSellCoupons(_buildParams(2 ether), vm.signERC1155Permit(1, couponManager, address(router), true));
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         // Catch event TakeOrder(address indexed sender, address indexed user, uint16 priceIndex, uint64 rawAmount, uint8 options);
@@ -168,11 +196,7 @@ contract CouponMarketRouterIntegrationTest is Test {
         vm.stopPrank();
     }
 
-    function _buildParams(uint256 erc20Amount, uint256 erc1155Amount)
-        internal
-        view
-        returns (ICouponMarketRouter.MarketSellParams memory)
-    {
+    function _buildParams(uint256 sellAmount) internal view returns (ICouponMarketRouter.MarketSellParams memory) {
         return ICouponMarketRouter.MarketSellParams({
             market: address(market),
             deadline: type(uint64).max,
@@ -180,8 +204,7 @@ contract CouponMarketRouterIntegrationTest is Test {
             minRawAmount: 0,
             recipient: recipient,
             couponKey: couponKey,
-            erc20Amount: erc20Amount,
-            erc1155Amount: erc1155Amount
+            amount: sellAmount
         });
     }
 }

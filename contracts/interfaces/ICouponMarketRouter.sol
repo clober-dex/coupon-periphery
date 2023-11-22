@@ -13,8 +13,7 @@ interface ICouponMarketRouter {
         address recipient;
         uint64 minRawAmount;
         CouponKey couponKey;
-        uint256 erc20Amount;
-        uint256 erc1155Amount;
+        uint256 amount;
     }
 
     error InvalidAccess();

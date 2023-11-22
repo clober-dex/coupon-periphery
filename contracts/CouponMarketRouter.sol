@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {CloberOrderBook} from "./external/clober/CloberOrderBook.sol";
 import {CloberMarketSwapCallbackReceiver} from "./external/clober/CloberMarketSwapCallbackReceiver.sol";
@@ -56,13 +57,15 @@ contract CouponMarketRouter is CloberMarketSwapCallbackReceiver, ICouponMarketRo
         if (_cloberMarketFactory.getMarketHost(msg.sender) == address(0)) {
             revert InvalidAccess();
         }
-        (address payer, address recipient, CouponKey memory couponKey, uint256 erc20Amount) =
-            abi.decode(data, (address, address, CouponKey, uint256));
+        (address payer, address recipient, CouponKey memory couponKey) = abi.decode(data, (address, address, CouponKey));
         bytes memory metadata = Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKey);
         uint256 couponId = couponKey.toId();
         if (inputToken != _wrapped1155Factory.getWrapped1155(address(_couponManager), couponId, metadata)) {
             revert InvalidMarket();
         }
+
+        uint256 erc20Amount =
+            Math.min(IERC20(inputToken).balanceOf(payer), IERC20(inputToken).allowance(payer, address(this)));
 
         if (inputAmount > erc20Amount) {
             _couponManager.safeTransferFrom(
@@ -83,12 +86,12 @@ contract CouponMarketRouter is CloberMarketSwapCallbackReceiver, ICouponMarketRo
     {
         couponPermitParams.tryPermitERC1155(_couponManager, msg.sender, address(this), true);
 
-        bytes memory data = abi.encode(msg.sender, params.recipient, params.couponKey, params.erc20Amount);
+        bytes memory data = abi.encode(msg.sender, params.recipient, params.couponKey);
         CloberOrderBook(params.market).marketOrder(
             address(this),
             params.limitPriceIndex,
             params.minRawAmount,
-            params.erc20Amount + params.erc1155Amount,
+            params.amount,
             2, // ask, expendInput
             data
         );
