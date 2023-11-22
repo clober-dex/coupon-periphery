@@ -39,4 +39,6 @@ interface ISimpleBondController is IERC1155Receiver {
         uint256 amount,
         Epoch expiredWith
     ) external payable;
+
+    function withdrawLostToken(address token, address to) external;
 }
