@@ -6,13 +6,13 @@ import {CouponKey} from "../libraries/CouponKey.sol";
 import {PermitSignature} from "../libraries/PermitParams.sol";
 
 interface ICouponMarketRouter {
-    struct MarketOrderParams {
+    struct MarketSellParams {
         address market;
         uint64 deadline;
         uint16 limitPriceIndex;
         address recipient;
         uint64 minRawAmount;
-        CouponKey couponKey; // 176
+        CouponKey couponKey;
         uint256 erc20Amount;
         uint256 erc1155Amount;
     }
@@ -22,6 +22,6 @@ interface ICouponMarketRouter {
     error Deadline();
     error FailedToSendValue();
 
-    function marketSellCoupons(MarketOrderParams calldata params, PermitSignature calldata couponPermitParams)
+    function marketSellCoupons(MarketSellParams calldata params, PermitSignature calldata couponPermitParams)
         external;
 }

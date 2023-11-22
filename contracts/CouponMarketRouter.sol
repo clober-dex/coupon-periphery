@@ -77,7 +77,7 @@ contract CouponMarketRouter is CloberMarketSwapCallbackReceiver, ICouponMarketRo
         ISubstitute(outputToken).burn(outputAmount, recipient);
     }
 
-    function marketSellCoupons(MarketOrderParams calldata params, PermitSignature calldata couponPermitParams)
+    function marketSellCoupons(MarketSellParams calldata params, PermitSignature calldata couponPermitParams)
         external
         checkDeadline(params.deadline)
     {

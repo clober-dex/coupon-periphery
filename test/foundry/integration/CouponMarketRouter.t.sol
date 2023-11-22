@@ -171,9 +171,9 @@ contract CouponMarketRouterIntegrationTest is Test {
     function _buildParams(uint256 erc20Amount, uint256 erc1155Amount)
         internal
         view
-        returns (ICouponMarketRouter.MarketOrderParams memory)
+        returns (ICouponMarketRouter.MarketSellParams memory)
     {
-        return ICouponMarketRouter.MarketOrderParams({
+        return ICouponMarketRouter.MarketSellParams({
             market: address(market),
             deadline: type(uint64).max,
             limitPriceIndex: 0,
