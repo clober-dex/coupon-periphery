@@ -23,4 +23,7 @@ interface ICouponMarketRouter {
 
     function marketSellCoupons(MarketSellParams calldata params, PermitSignature calldata couponPermitParams)
         external;
+
+    function batchMarketSellCoupons(MarketSellParams[] calldata paramsList, PermitSignature calldata couponPermitParams)
+        external;
 }
