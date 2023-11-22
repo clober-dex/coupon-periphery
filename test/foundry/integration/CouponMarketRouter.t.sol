@@ -17,12 +17,13 @@ import {Epoch, EpochLibrary} from "../../../contracts/libraries/Epoch.sol";
 import {CouponMarketRouter} from "../../../contracts/CouponMarketRouter.sol";
 import {CouponWrapper} from "../../../contracts/CouponWrapper.sol";
 import {Constants} from "../Constants.sol";
-import {ForkUtils, PermitSignLibrary} from "../Utils.sol";
+import {ForkUtils, PermitSignLibrary, VmLogUtilsLibrary} from "../Utils.sol";
 
 contract CouponMarketRouterIntegrationTest is Test {
     using EpochLibrary for Epoch;
     using CouponKeyLibrary for CouponKey;
     using PermitSignLibrary for Vm;
+    using VmLogUtilsLibrary for Vm.Log[];
 
     address private constant _WETH_COUPON_MARKET = address(0);
     // WaETH-CP646
@@ -76,10 +77,10 @@ contract CouponMarketRouterIntegrationTest is Test {
         wrappedCoupon.approve(address(router), 1 ether);
         vm.recordLogs();
         router.marketSellCoupons(_buildParams(2 ether), vm.signERC1155Permit(1, couponManager, address(router), true));
-        Vm.Log[] memory logs = vm.getRecordedLogs();
+        Vm.Log[] memory takeOrders = vm.getRecordedLogs().findLogsByEvent(CloberOrderBook.TakeOrder.selector);
 
         // Catch event TakeOrder(address indexed sender, address indexed user, uint16 priceIndex, uint64 rawAmount, uint8 options);
-        (, uint64 rawAmount,) = abi.decode(logs[1].data, (uint16, uint64, uint8));
+        (, uint64 rawAmount,) = abi.decode(takeOrders[0].data, (uint16, uint64, uint8));
         uint256 actualInputAmount = market.rawToBase(rawAmount, bestBid, true);
         uint256 actualOutputAmount = market.rawToQuote(rawAmount) * (1e6 - market.takerFee()) / 1e6;
 
@@ -110,10 +111,10 @@ contract CouponMarketRouterIntegrationTest is Test {
         wrappedCoupon.approve(address(router), 1 ether);
         vm.recordLogs();
         router.marketSellCoupons(_buildParams(2 ether), vm.signERC1155Permit(1, couponManager, address(router), true));
-        Vm.Log[] memory logs = vm.getRecordedLogs();
+        Vm.Log[] memory takeOrders = vm.getRecordedLogs().findLogsByEvent(CloberOrderBook.TakeOrder.selector);
 
         // Catch event TakeOrder(address indexed sender, address indexed user, uint16 priceIndex, uint64 rawAmount, uint8 options);
-        (, uint64 rawAmount,) = abi.decode(logs[1].data, (uint16, uint64, uint8));
+        (, uint64 rawAmount,) = abi.decode(takeOrders[0].data, (uint16, uint64, uint8));
         uint256 actualInputAmount = market.rawToBase(rawAmount, bestBid, true);
         uint256 actualOutputAmount = market.rawToQuote(rawAmount) * (1e6 - market.takerFee()) / 1e6;
 
@@ -141,10 +142,10 @@ contract CouponMarketRouterIntegrationTest is Test {
 
         vm.recordLogs();
         router.marketSellCoupons(_buildParams(2 ether), vm.signERC1155Permit(1, couponManager, address(router), true));
-        Vm.Log[] memory logs = vm.getRecordedLogs();
+        Vm.Log[] memory takeOrders = vm.getRecordedLogs().findLogsByEvent(CloberOrderBook.TakeOrder.selector);
 
         // Catch event TakeOrder(address indexed sender, address indexed user, uint16 priceIndex, uint64 rawAmount, uint8 options);
-        (, uint64 rawAmount,) = abi.decode(logs[1].data, (uint16, uint64, uint8));
+        (, uint64 rawAmount,) = abi.decode(takeOrders[0].data, (uint16, uint64, uint8));
         uint256 actualInputAmount = market.rawToBase(rawAmount, bestBid, true);
         uint256 actualOutputAmount = market.rawToQuote(rawAmount) * (1e6 - market.takerFee()) / 1e6;
 
@@ -173,10 +174,10 @@ contract CouponMarketRouterIntegrationTest is Test {
         wrappedCoupon.approve(address(router), 2 ether);
         vm.recordLogs();
         router.marketSellCoupons(_buildParams(2 ether), vm.signERC1155Permit(1, couponManager, address(router), true));
-        Vm.Log[] memory logs = vm.getRecordedLogs();
+        Vm.Log[] memory takeOrders = vm.getRecordedLogs().findLogsByEvent(CloberOrderBook.TakeOrder.selector);
 
         // Catch event TakeOrder(address indexed sender, address indexed user, uint16 priceIndex, uint64 rawAmount, uint8 options);
-        (, uint64 rawAmount,) = abi.decode(logs[1].data, (uint16, uint64, uint8));
+        (, uint64 rawAmount,) = abi.decode(takeOrders[0].data, (uint16, uint64, uint8));
         uint256 actualInputAmount = market.rawToBase(rawAmount, bestBid, true);
         uint256 actualOutputAmount = market.rawToQuote(rawAmount) * (1e6 - market.takerFee()) / 1e6;
 
