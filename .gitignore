@@ -17,7 +17,7 @@ types/
 #vim
 **/.*.swp
 
-mainnet-deploy-key-store.json
+*key.json
 
 #Foundry files
 out/
