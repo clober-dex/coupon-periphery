@@ -199,7 +199,13 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         );
         vm.prank(borrower);
         borrowController.borrow(
-            collateralToken, borrowToken, collateralAmount, borrowAmount, type(uint256).max, loanEpochs, permitParams
+            collateralToken,
+            borrowToken,
+            collateralAmount,
+            borrowAmount,
+            type(uint256).max,
+            EpochLibrary.current().add(loanEpochs - 1),
+            permitParams
         );
     }
 
