@@ -137,3 +137,20 @@ library PermitSignLibrary {
         return PermitSignature(block.timestamp + 1, v, r, s);
     }
 }
+
+library VmLogUtilsLibrary {
+    function findLogsByEvent(Vm.Log[] memory logs, bytes32 eventSelector) internal pure returns (Vm.Log[] memory) {
+        Vm.Log[] memory result = new Vm.Log[](logs.length);
+        uint256 index = 0;
+        for (uint256 i = 0; i < logs.length; ++i) {
+            if (logs[i].topics[0] == eventSelector) {
+                result[index] = logs[i];
+                index++;
+            }
+        }
+        assembly {
+            mstore(result, index)
+        }
+        return result;
+    }
+}
