@@ -1,7 +1,7 @@
 import { DeployFunction } from 'hardhat-deploy/types'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { hardhat } from 'viem/chains'
-import { LIQUIDATOR_ROUTER, LOAN_POSITION_MANAGER, TOKENS, deployWithVerify } from '../utils'
+import { LIQUIDATOR_ROUTER, LOAN_POSITION_MANAGER, TOKENS, deployWithVerify, TOKEN_KEYS } from '../utils'
 
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, network } = hre
@@ -12,7 +12,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   const chainId = network.config.chainId || hardhat.id
 
-  const args = [LOAN_POSITION_MANAGER[chainId], LIQUIDATOR_ROUTER[chainId], TOKENS[chainId].WETH]
+  const args = [LOAN_POSITION_MANAGER[chainId], LIQUIDATOR_ROUTER[chainId], TOKENS[chainId][TOKEN_KEYS.WETH]]
   await deployWithVerify(hre, 'CouponLiquidator', args)
 }
 

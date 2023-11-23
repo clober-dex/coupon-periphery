@@ -1,44 +1,53 @@
 import { arbitrum, arbitrumGoerli } from 'viem/chains'
+import { Address } from 'viem'
+
+export const TESTNET_ID = 7777
 
 export const SINGLETON_FACTORY = '0xce0042B868300000d44A59004Da54A005ffdcf9f'
 
-export const ASSET_POOL: { [chainId: number]: string } = {
+export const OWNER: { [chainId: number]: Address } = {
+  [arbitrum.id]: '0x1689FD73FfC888d47D201b72B0ae7A83c20fA274',
+  [arbitrumGoerli.id]: '0xa0E3174f4D222C5CBf705A138C6a9369935EeD81',
+  [TESTNET_ID]: '0xa0E3174f4D222C5CBf705A138C6a9369935EeD81',
+}
+
+export const ASSET_POOL: { [chainId: number]: Address } = {
   [arbitrum.id]: '0xBA4B7f0Dd297C68Ca472da58CfE1338B9E7A0D9e',
 }
 
-export const BOND_POSITION_MANAGER: { [chainId: number]: string } = {
+export const BOND_POSITION_MANAGER: { [chainId: number]: Address } = {
   [arbitrum.id]: '0x0Cf91Bc7a67B063142C029a69fF9C8ccd93476E2',
 }
 
-export const COUPON_MANAGER: { [chainId: number]: string } = {
+export const COUPON_MANAGER: { [chainId: number]: Address } = {
   [arbitrum.id]: '0x8bbcA766D175aDbffB073832262990df1c5ef748',
 }
 
-export const COUPON_ORACLE: { [chainId: number]: string } = {
+export const COUPON_ORACLE: { [chainId: number]: Address } = {
   [arbitrum.id]: '0xF8e9ab02b057978c29Ca57c7E086D46983764A13',
 }
 
-export const LOAN_POSITION_MANAGER: { [chainId: number]: string } = {
+export const LOAN_POSITION_MANAGER: { [chainId: number]: Address } = {
   [arbitrum.id]: '0x03d65411684ae7B5440E11a6063881a774C733dF',
 }
 
-export const CLOBER_FACTORY: { [chainId: number]: string } = {
+export const CLOBER_FACTORY: { [chainId: number]: Address } = {
   [arbitrum.id]: '0x24aC0938C010Fb520F1068e96d78E0458855111D',
 }
 
-export const WRAPPED1155_FACTORY: { [chainId: number]: string } = {
+export const WRAPPED1155_FACTORY: { [chainId: number]: Address } = {
   [arbitrum.id]: '0xfcBE16BfD991E4949244E59d9b524e6964b8BB75',
 }
 
-export const REPAY_ROUTER: { [chainId: number]: string } = {
+export const REPAY_ROUTER: { [chainId: number]: Address } = {
   [arbitrum.id]: '0xa669e7A0d4b3e4Fa48af2dE86BD4CD7126Be4e13',
 }
 
-export const LEVERAGE_ROUTER: { [chainId: number]: string } = {
+export const LEVERAGE_ROUTER: { [chainId: number]: Address } = {
   [arbitrum.id]: '0xa669e7A0d4b3e4Fa48af2dE86BD4CD7126Be4e13',
 }
 
-export const LIQUIDATOR_ROUTER: { [chainId: number]: string } = {
+export const LIQUIDATOR_ROUTER: { [chainId: number]: Address } = {
   [arbitrum.id]: '0xa669e7A0d4b3e4Fa48af2dE86BD4CD7126Be4e13',
 }
 
@@ -52,7 +61,9 @@ export const TOKEN_KEYS = {
   WBTC: 'WBTC',
 }
 
-export const TOKENS: { [chainId: number]: { [name: string]: string } } = {
+export type TokenKeys = (typeof TOKEN_KEYS)[keyof typeof TOKEN_KEYS]
+
+export const TOKENS: { [chainId: number]: { [name: TokenKeys]: Address } } = {
   [arbitrum.id]: {
     [TOKEN_KEYS.WETH]: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
     [TOKEN_KEYS.wstETH]: '0x5979D7b546E38E414F7E9822514be443A4800529',
@@ -71,7 +82,7 @@ export const TOKENS: { [chainId: number]: { [name: string]: string } } = {
   },
 }
 
-export const AAVE_SUBSTITUTES: { [chainId: number]: { [name: string]: string } } = {
+export const AAVE_SUBSTITUTES: { [chainId: number]: { [name: TokenKeys]: Address } } = {
   [arbitrum.id]: {
     [TOKEN_KEYS.WETH]: '0xAb6c37355D6C06fcF73Ab0E049d9Cf922f297573',
     [TOKEN_KEYS.USDC]: '0x7Ed1145045c8B754506d375Cdf90734550d1077e',

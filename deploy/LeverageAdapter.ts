@@ -9,6 +9,7 @@ import {
   deployWithVerify,
   COUPON_MANAGER,
   LOAN_POSITION_MANAGER,
+  TOKEN_KEYS,
 } from '../utils'
 
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -24,7 +25,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
     WRAPPED1155_FACTORY[chainId],
     CLOBER_FACTORY[chainId],
     COUPON_MANAGER[chainId],
-    TOKENS[chainId].WETH,
+    TOKENS[chainId][TOKEN_KEYS.WETH],
     LOAN_POSITION_MANAGER[chainId],
     LEVERAGE_ROUTER[chainId],
   ]
