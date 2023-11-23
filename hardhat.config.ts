@@ -8,6 +8,7 @@ import '@nomicfoundation/hardhat-viem'
 import 'hardhat-gas-reporter'
 import 'hardhat-contract-sizer'
 import 'hardhat-abi-exporter'
+import '@nomicfoundation/hardhat-verify'
 
 import './task/index'
 import { HardhatConfig } from 'hardhat/types'
@@ -77,9 +78,10 @@ const config: HardhatConfig = {
   },
   etherscan: {
     apiKey: {
-      arbitrumOne: process.env.ARBISCAN_API_KEY,
-      arbitrumGoerli: process.env.ARBISCAN_API_KEY,
+      arbitrumOne: process.env.ARBISCAN_API_KEY ?? '',
+      arbitrumGoerli: process.env.ARBISCAN_API_KEY ?? '',
     },
+    customChains: [],
   },
   defaultNetwork: 'hardhat',
   networks: {
