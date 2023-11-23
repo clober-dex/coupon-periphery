@@ -188,7 +188,13 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         );
         vm.prank(borrower);
         borrowController.borrow(
-            collateralToken, borrowToken, collateralAmount, borrowAmount, type(uint256).max, loanEpochs, permitParams
+            collateralToken,
+            borrowToken,
+            collateralAmount,
+            borrowAmount,
+            type(uint256).max,
+            EpochLibrary.current().add(loanEpochs - 1),
+            permitParams
         );
     }
 
@@ -230,7 +236,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             beforeLoanPosition.debtAmount + 0.5 ether,
             type(uint256).max,
             0,
-            Epoch.unwrap(beforeLoanPosition.expiredWith),
+            beforeLoanPosition.expiredWith,
             permit721Params,
             emptyERC20PermitParams,
             emptyERC20PermitParams
@@ -269,7 +275,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             beforeLoanPosition.debtAmount,
             type(uint256).max,
             0,
-            Epoch.unwrap(beforeLoanPosition.expiredWith),
+            beforeLoanPosition.expiredWith,
             permit721Params,
             permit20Params,
             emptyERC20PermitParams
@@ -305,7 +311,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             beforeLoanPosition.debtAmount,
             type(uint256).max,
             0,
-            Epoch.unwrap(beforeLoanPosition.expiredWith),
+            beforeLoanPosition.expiredWith,
             permit721Params,
             emptyERC20PermitParams,
             emptyERC20PermitParams
@@ -343,7 +349,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             beforeLoanPosition.debtAmount,
             maxPayInterest,
             0,
-            Epoch.unwrap(beforeLoanPosition.expiredWith) + epochs,
+            beforeLoanPosition.expiredWith.add(epochs),
             permit721Params,
             emptyERC20PermitParams,
             emptyERC20PermitParams
@@ -378,7 +384,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             beforeLoanPosition.debtAmount,
             type(uint256).max,
             0,
-            Epoch.unwrap(beforeLoanPosition.expiredWith) - epochs,
+            beforeLoanPosition.expiredWith.sub(epochs),
             permit721Params,
             emptyERC20PermitParams,
             emptyERC20PermitParams
@@ -414,7 +420,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             beforeLoanPosition.debtAmount - repayAmount,
             type(uint256).max,
             0,
-            Epoch.unwrap(beforeLoanPosition.expiredWith),
+            beforeLoanPosition.expiredWith,
             permit721Params,
             emptyERC20PermitParams,
             permit20Params
@@ -450,7 +456,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             beforeLoanPosition.debtAmount - repayAmount,
             type(uint256).max,
             0,
-            Epoch.unwrap(beforeLoanPosition.expiredWith),
+            beforeLoanPosition.expiredWith,
             permit721Params,
             emptyERC20PermitParams,
             permit20Params
@@ -475,7 +481,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             beforeLoanPosition.debtAmount + 0.5 ether,
             type(uint256).max,
             0,
-            Epoch.unwrap(beforeLoanPosition.expiredWith),
+            beforeLoanPosition.expiredWith,
             permit721Params,
             emptyERC20PermitParams,
             emptyERC20PermitParams
@@ -498,7 +504,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             beforeLoanPosition.debtAmount,
             type(uint256).max,
             0,
-            Epoch.unwrap(beforeLoanPosition.expiredWith),
+            beforeLoanPosition.expiredWith,
             permit721Params,
             emptyERC20PermitParams,
             emptyERC20PermitParams

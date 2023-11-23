@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import {IController} from "./IController.sol";
 import {ERC20PermitParams, PermitSignature} from "../libraries/PermitParams.sol";
+import {Epoch} from "../libraries/Epoch.sol";
 
 interface IBorrowController is IController {
     error CollateralSwapFailed(string reason);
@@ -15,7 +16,7 @@ interface IBorrowController is IController {
         uint256 collateralAmount,
         uint256 borrowAmount,
         uint256 maxPayInterest,
-        uint16 loanEpochs,
+        Epoch expiredWith,
         ERC20PermitParams calldata collateralPermitParams
     ) external payable;
 
@@ -25,7 +26,7 @@ interface IBorrowController is IController {
         uint256 borrowAmount,
         uint256 maxPayInterest,
         uint256 minEarnInterest,
-        uint16 expiredWith,
+        Epoch expiredWith,
         PermitSignature calldata positionPermitParams,
         ERC20PermitParams calldata collateralPermitParams,
         ERC20PermitParams calldata debtPermitParams

@@ -198,7 +198,13 @@ contract RepayAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceiver, 
         );
         vm.prank(borrower);
         borrowController.borrow(
-            collateralToken, borrowToken, collateralAmount, borrowAmount, type(uint256).max, loanEpochs, permitParams
+            collateralToken,
+            borrowToken,
+            collateralAmount,
+            borrowAmount,
+            type(uint256).max,
+            EpochLibrary.current().add(loanEpochs - 1),
+            permitParams
         );
     }
 
