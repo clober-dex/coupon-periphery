@@ -30,6 +30,7 @@ import {CloberMarketSwapCallbackReceiver} from "../../../contracts/external/clob
 import {CloberOrderBook} from "../../../contracts/external/clober/CloberOrderBook.sol";
 import {BorrowController} from "../../../contracts/BorrowController.sol";
 import {IBorrowController} from "../../../contracts/interfaces/IBorrowController.sol";
+import {IController} from "../../../contracts/interfaces/IController.sol";
 import {AaveTokenSubstitute} from "../../../contracts/AaveTokenSubstitute.sol";
 
 contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiver, ERC1155Holder {
@@ -498,6 +499,27 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             vm.signERC721Permit(1, loanPositionManager, address(borrowController), positionId);
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(ILoanPositionManagerTypes.FullRepaymentRequired.selector));
+        borrowController.adjustPosition(
+            positionId,
+            beforeLoanPosition.collateralAmount - collateralAmount,
+            beforeLoanPosition.debtAmount,
+            type(uint256).max,
+            0,
+            beforeLoanPosition.expiredWith,
+            permit721Params,
+            emptyERC20PermitParams,
+            emptyERC20PermitParams
+        );
+    }
+
+    function testOthersPosition() public {
+        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 2);
+        LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
+        uint256 collateralAmount = usdc.amount(123);
+        // loan duration is 2 epochs
+        PermitSignature memory permit721Params =
+            vm.signERC721Permit(1, loanPositionManager, address(borrowController), positionId);
+        vm.expectRevert(abi.encodeWithSelector(IController.InvalidAccess.selector));
         borrowController.adjustPosition(
             positionId,
             beforeLoanPosition.collateralAmount - collateralAmount,
