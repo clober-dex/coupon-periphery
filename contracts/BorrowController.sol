@@ -117,97 +117,29 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         _loanPositionManager.transferFrom(address(this), msg.sender, positionId);
     }
 
-    function borrowMore(
+    function adjustPosition(
         uint256 positionId,
-        uint256 amount,
+        uint256 collateralAmount,
+        uint256 borrowAmount,
         uint256 maxPayInterest,
-        PermitSignature calldata positionPermitParams
-    ) external nonReentrant onlyPositionOwner(positionId) {
-        positionPermitParams.tryPermitERC721(_loanPositionManager, positionId, address(this));
-        LoanPosition memory position = _loanPositionManager.getPosition(positionId);
-        position.debtAmount += amount;
-
-        _loanPositionManager.lock(_encodeAdjustData(positionId, position, maxPayInterest, 0));
-
-        _burnAllSubstitute(position.debtToken, msg.sender);
-    }
-
-    function addCollateral(
-        uint256 positionId,
-        uint256 amount,
+        uint256 minEarnInterest,
+        uint16 expiredWith,
         PermitSignature calldata positionPermitParams,
-        ERC20PermitParams calldata collateralPermitParams
-    ) external payable nonReentrant onlyPositionOwner(positionId) wrapETH {
+        ERC20PermitParams calldata collateralPermitParams,
+        ERC20PermitParams calldata debtPermitParams
+    ) external payable nonReentrant wrapETH {
         positionPermitParams.tryPermitERC721(_loanPositionManager, positionId, address(this));
         LoanPosition memory position = _loanPositionManager.getPosition(positionId);
         collateralPermitParams.tryPermit(_getUnderlyingToken(position.collateralToken), msg.sender, address(this));
-        position.collateralAmount += amount;
+        debtPermitParams.tryPermit(_getUnderlyingToken(position.debtToken), msg.sender, address(this));
 
-        _loanPositionManager.lock(_encodeAdjustData(positionId, position, 0, 0));
+        position.collateralAmount = collateralAmount;
+        position.debtAmount = borrowAmount;
+        position.expiredWith = Epoch.wrap(expiredWith);
+
+        _loanPositionManager.lock(_encodeAdjustData(positionId, position, maxPayInterest, minEarnInterest));
 
         _burnAllSubstitute(position.collateralToken, msg.sender);
-    }
-
-    function removeCollateral(uint256 positionId, uint256 amount, PermitSignature calldata positionPermitParams)
-        external
-        nonReentrant
-        onlyPositionOwner(positionId)
-    {
-        positionPermitParams.tryPermitERC721(_loanPositionManager, positionId, address(this));
-        LoanPosition memory position = _loanPositionManager.getPosition(positionId);
-        position.collateralAmount -= amount;
-
-        _loanPositionManager.lock(_encodeAdjustData(positionId, position, 0, 0));
-
-        _burnAllSubstitute(position.collateralToken, msg.sender);
-    }
-
-    function extendLoanDuration(
-        uint256 positionId,
-        uint16 epochs,
-        uint256 maxPayInterest,
-        PermitSignature calldata positionPermitParams,
-        ERC20PermitParams calldata debtPermitParams
-    ) external payable nonReentrant onlyPositionOwner(positionId) wrapETH {
-        positionPermitParams.tryPermitERC721(_loanPositionManager, positionId, address(this));
-        LoanPosition memory position = _loanPositionManager.getPosition(positionId);
-        debtPermitParams.tryPermit(_getUnderlyingToken(position.debtToken), msg.sender, address(this));
-        position.expiredWith = position.expiredWith.add(epochs);
-
-        _loanPositionManager.lock(_encodeAdjustData(positionId, position, maxPayInterest, 0));
-
-        _burnAllSubstitute(position.debtToken, msg.sender);
-    }
-
-    function shortenLoanDuration(
-        uint256 positionId,
-        uint16 epochs,
-        uint256 minEarnInterest,
-        PermitSignature calldata positionPermitParams
-    ) external nonReentrant onlyPositionOwner(positionId) {
-        positionPermitParams.tryPermitERC721(_loanPositionManager, positionId, address(this));
-        LoanPosition memory position = _loanPositionManager.getPosition(positionId);
-        position.expiredWith = position.expiredWith.sub(epochs);
-
-        _loanPositionManager.lock(_encodeAdjustData(positionId, position, 0, minEarnInterest));
-
-        _burnAllSubstitute(position.debtToken, msg.sender);
-    }
-
-    function repay(
-        uint256 positionId,
-        uint256 amount,
-        uint256 minEarnInterest,
-        PermitSignature calldata positionPermitParams,
-        ERC20PermitParams calldata debtPermitParams
-    ) external payable nonReentrant onlyPositionOwner(positionId) wrapETH {
-        positionPermitParams.tryPermitERC721(_loanPositionManager, positionId, address(this));
-        LoanPosition memory position = _loanPositionManager.getPosition(positionId);
-        debtPermitParams.tryPermit(_getUnderlyingToken(position.debtToken), msg.sender, address(this));
-        position.debtAmount -= amount;
-
-        _loanPositionManager.lock(_encodeAdjustData(positionId, position, 0, minEarnInterest));
-
         _burnAllSubstitute(position.debtToken, msg.sender);
     }
 
