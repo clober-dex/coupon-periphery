@@ -2,19 +2,20 @@
 
 pragma solidity ^0.8.0;
 
+import {IEthSubstituteMinter} from "./interfaces/IEthSubstituteMinter.sol";
 import {ISubstitute} from "./interfaces/ISubstitute.sol";
 import {IWETH9} from "./external/weth/IWETH9.sol";
 
-contract EthSubstituteWrapper {
+contract EthSubstituteMinter is IEthSubstituteMinter {
     IWETH9 private immutable _weth;
 
     constructor(address weth) {
         _weth = IWETH9(weth);
     }
 
-    function wrap(ISubstitute substitute, address to) external payable {
+    function mint(ISubstitute substitute, address recipient) external payable {
         _weth.deposit{value: msg.value}();
         _weth.approve(address(substitute), msg.value);
-        substitute.mint(msg.value, to);
+        substitute.mint(msg.value, recipient);
     }
 }

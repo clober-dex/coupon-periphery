@@ -4,6 +4,6 @@ pragma solidity ^0.8.0;
 
 import {ISubstitute} from "./ISubstitute.sol";
 
-interface IEthSubstituteWrapper {
-    function wrap(ISubstitute substitute) external payable;
+interface IEthSubstituteMinter {
+    function mint(ISubstitute substitute, address recipient) external payable;
 }
