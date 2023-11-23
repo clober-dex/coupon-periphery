@@ -97,7 +97,7 @@ library PermitSignLibrary {
     bytes32 private constant _ERC20_PERMIT_TYPEHASH =
         keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
-    function signERC20Permit(Vm vm, uint256 privateKey, IERC20Permit token, address spender, uint256 amount)
+    function signPermit(Vm vm, uint256 privateKey, IERC20Permit token, address spender, uint256 amount)
         internal
         view
         returns (ERC20PermitParams memory)
@@ -111,7 +111,7 @@ library PermitSignLibrary {
         return ERC20PermitParams(amount, PermitSignature(block.timestamp + 1, v, r, s));
     }
 
-    function signERC721Permit(Vm vm, uint256 privateKey, IERC721Permit token, address spender, uint256 tokenId)
+    function signPermit(Vm vm, uint256 privateKey, IERC721Permit token, address spender, uint256 tokenId)
         internal
         view
         returns (PermitSignature memory)
@@ -123,7 +123,7 @@ library PermitSignLibrary {
         return PermitSignature(block.timestamp + 1, v, r, s);
     }
 
-    function signERC1155Permit(Vm vm, uint256 privateKey, IERC1155Permit token, address spender, bool approved)
+    function signPermit(Vm vm, uint256 privateKey, IERC1155Permit token, address spender, bool approved)
         internal
         view
         returns (PermitSignature memory)
