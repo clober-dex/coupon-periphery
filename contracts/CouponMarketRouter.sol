@@ -83,7 +83,7 @@ contract CouponMarketRouter is CloberMarketSwapCallbackReceiver, ICouponMarketRo
     function marketSellCoupons(MarketSellParams calldata params, PermitSignature calldata couponPermitParams)
         external
     {
-        couponPermitParams.tryPermitERC1155(_couponManager, msg.sender, address(this), true);
+        couponPermitParams.tryPermit(_couponManager, msg.sender, address(this), true);
 
         _marketSellCoupon(params);
     }
@@ -91,7 +91,7 @@ contract CouponMarketRouter is CloberMarketSwapCallbackReceiver, ICouponMarketRo
     function batchMarketSellCoupons(MarketSellParams[] calldata paramsList, PermitSignature calldata couponPermitParams)
         external
     {
-        couponPermitParams.tryPermitERC1155(_couponManager, msg.sender, address(this), true);
+        couponPermitParams.tryPermit(_couponManager, msg.sender, address(this), true);
 
         for (uint256 i; i < paramsList.length; ++i) {
             _marketSellCoupon(paramsList[i]);

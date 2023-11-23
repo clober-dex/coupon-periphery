@@ -65,7 +65,7 @@ contract CouponWrapper is ICouponWrapper {
         Coupon[] calldata coupons,
         address recipient
     ) external {
-        couponPermitSignature.tryPermitERC1155(_couponManager, msg.sender, address(this), true);
+        couponPermitSignature.tryPermit(_couponManager, msg.sender, address(this), true);
         _wrap(coupons, recipient);
     }
 

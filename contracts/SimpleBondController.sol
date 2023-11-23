@@ -148,8 +148,8 @@ contract SimpleBondController is IPositionLocker, ERC1155Holder, ISimpleBondCont
         Epoch expiredWith,
         bool wrapCoupons
     ) internal wrapETH {
-        positionPermitParams.tryPermitERC721(_bondPositionManager, tokenId, address(this));
-        couponPermitParams.tryPermitERC1155(_couponManager, msg.sender, address(this), true);
+        positionPermitParams.tryPermit(_bondPositionManager, tokenId, address(this));
+        couponPermitParams.tryPermit(_couponManager, msg.sender, address(this), true);
         address asset = _bondPositionManager.getPosition(tokenId).asset;
         address underlyingToken = ISubstitute(asset).underlyingToken();
         tokenPermitParams.tryPermit(underlyingToken, msg.sender, address(this));

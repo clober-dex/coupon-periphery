@@ -127,7 +127,7 @@ contract RepayAdapter is IRepayAdapter, Controller, IPositionLocker {
         bytes memory swapData,
         PermitSignature calldata positionPermitParams
     ) external nonReentrant onlyPositionOwner(positionId) {
-        positionPermitParams.tryPermitERC721(_loanPositionManager, positionId, address(this));
+        positionPermitParams.tryPermit(_loanPositionManager, positionId, address(this));
         _loanPositionManager.lock(abi.encode(positionId, msg.sender, sellCollateralAmount, minRepayAmount, swapData));
     }
 

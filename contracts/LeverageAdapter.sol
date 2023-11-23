@@ -143,7 +143,7 @@ contract LeverageAdapter is ILeverageAdapter, Controller, IPositionLocker {
         LoanPosition memory position = _loanPositionManager.getPosition(positionId);
 
         collateralPermitParams.tryPermit(_getUnderlyingToken(position.collateralToken), msg.sender, address(this));
-        positionPermitParams.tryPermitERC721(_loanPositionManager, positionId, address(this));
+        positionPermitParams.tryPermit(_loanPositionManager, positionId, address(this));
 
         position.collateralAmount += collateralAmount;
         position.debtAmount += debtAmount;

@@ -19,29 +19,26 @@ struct PermitSignature {
 }
 
 library PermitParamsLibrary {
-    error PermitFailed();
-
     function tryPermit(ERC20PermitParams memory params, address token, address from, address to)
         internal
         returns (bool)
     {
-        if (params.signature.deadline > 0) {
-            try IERC20Permit(token).permit(
-                from,
-                to,
-                params.permitAmount,
-                params.signature.deadline,
-                params.signature.v,
-                params.signature.r,
-                params.signature.s
-            ) {
+        return tryPermit(params.signature, IERC20Permit(token), params.permitAmount, from, to);
+    }
+
+    function tryPermit(PermitSignature memory params, IERC20Permit token, uint256 amount, address from, address to)
+        internal
+        returns (bool)
+    {
+        if (params.deadline > 0) {
+            try token.permit(from, to, amount, params.deadline, params.v, params.r, params.s) {
                 return true;
             } catch {}
         }
         return false;
     }
 
-    function tryPermitERC721(PermitSignature memory params, IERC721Permit token, uint256 positionId, address to)
+    function tryPermit(PermitSignature memory params, IERC721Permit token, uint256 positionId, address to)
         internal
         returns (bool)
     {
@@ -53,13 +50,10 @@ library PermitParamsLibrary {
         return false;
     }
 
-    function tryPermitERC1155(
-        PermitSignature memory params,
-        IERC1155Permit token,
-        address from,
-        address to,
-        bool approved
-    ) internal returns (bool) {
+    function tryPermit(PermitSignature memory params, IERC1155Permit token, address from, address to, bool approved)
+        internal
+        returns (bool)
+    {
         if (params.deadline > 0) {
             try token.permit(from, to, approved, params.deadline, params.v, params.r, params.s) {
                 return true;
