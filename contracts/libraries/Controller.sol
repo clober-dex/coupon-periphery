@@ -161,6 +161,7 @@ abstract contract Controller is
     }
 
     function _ensureBalance(address token, address user, uint256 amount) internal {
+        // TODO: consider to use SubstituteLibrary
         address underlyingToken = ISubstitute(token).underlyingToken();
         uint256 thisBalance = IERC20(token).balanceOf(address(this));
         uint256 underlyingBalance = IERC20(underlyingToken).balanceOf(address(this));
