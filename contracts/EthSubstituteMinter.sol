@@ -24,8 +24,12 @@ contract EthSubstituteMinter is IEthSubstituteMinter {
         if (msg.value > amount) {
             revert ExceedsAmount();
         }
-        _weth.transferFrom(msg.sender, address(this), amount - msg.value);
-        _weth.deposit{value: msg.value}();
+        if (msg.value < amount) {
+            _weth.transferFrom(msg.sender, address(this), amount - msg.value);
+        }
+        if (msg.value > 0) {
+            _weth.deposit{value: msg.value}();
+        }
         _weth.approve(address(substitute), amount);
         substitute.mint(amount, recipient);
     }
