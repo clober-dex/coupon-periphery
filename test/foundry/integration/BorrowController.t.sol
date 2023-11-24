@@ -313,7 +313,8 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
 
-        IBorrowController.SwapData memory swapData;        vm.prank(user);
+        IBorrowController.SwapData memory swapData;
+        vm.prank(user);
         borrowController.adjustPosition(
             positionId,
             beforeLoanPosition.collateralAmount - collateralAmount,
