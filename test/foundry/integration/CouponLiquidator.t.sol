@@ -105,7 +105,7 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         );
 
         couponLiquidator =
-            new CouponLiquidator( address (loanPositionManager), Constants.ODOS_V2_SWAP_ROUTER, Constants.WETH);
+            new CouponLiquidator(address(loanPositionManager), Constants.ODOS_V2_SWAP_ROUTER, Constants.WETH);
 
         IERC20(wausdc).transfer(address(assetPool), usdc.amount(1_500));
         IERC20(waweth).transfer(address(assetPool), 1_500 ether);
@@ -269,7 +269,7 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
     function fromHex(string memory s) public pure returns (bytes memory) {
         bytes memory ss = bytes(s);
         require(ss.length % 2 == 0); // length must be even
-        bytes memory r = new bytes(ss.length/2);
+        bytes memory r = new bytes(ss.length / 2);
         for (uint256 i = 0; i < ss.length / 2; ++i) {
             r[i] = bytes1(fromHexChar(uint8(ss[2 * i])) * 16 + fromHexChar(uint8(ss[2 * i + 1])));
         }

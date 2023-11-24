@@ -53,11 +53,7 @@ contract AaveTokenSubstituteUnitTest is Test, ERC1155Holder {
         vm.stopPrank();
 
         aaveTokenSubstitute = new AaveTokenSubstitute(
-            Constants.WETH,
-            Constants.USDC,
-            Constants.AAVE_V3_POOL,
-            Constants.TREASURY,
-            address(this)
+            Constants.WETH, Constants.USDC, Constants.AAVE_V3_POOL, Constants.TREASURY, address(this)
         );
 
         aUsdc = IERC20(aaveTokenSubstitute.aToken());
@@ -144,11 +140,7 @@ contract AaveTokenSubstituteUnitTest is Test, ERC1155Holder {
 
     function testBurnETH() public {
         aaveTokenSubstitute = new AaveTokenSubstitute(
-            Constants.WETH,
-            Constants.WETH,
-            Constants.AAVE_V3_POOL,
-            Constants.TREASURY,
-            address(this)
+            Constants.WETH, Constants.WETH, Constants.AAVE_V3_POOL, Constants.TREASURY, address(this)
         );
         uint256 amount = 10 ether;
         vm.deal(address(this), amount);
