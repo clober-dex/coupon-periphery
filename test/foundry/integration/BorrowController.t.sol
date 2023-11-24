@@ -608,6 +608,163 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         assertEq(loanPosition.debtToken, wausdc, "POSITION_DEBT_TOKEN");
     }
 
+    function testRepayWithCollateral() public {
+        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 2);
+
+        uint256 beforeUSDCBalance = usdc.balanceOf(user);
+        uint256 beforeETHBalance = user.balance;
+        LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
+        uint256 collateralAmount = usdc.amount(500);
+        uint256 debtAmount = 0.75 ether;
+
+        IBorrowController.SwapData memory swapData;
+        swapData.data = fromHex(
+            string.concat(
+                "83bd37f9000a000b041dcd65000803608bda99eed8c0028f5c00017F137D1D8d20BA54004Ba358E9C229DA26FA3Fa900000001",
+                this.remove0x(Strings.toHexString(address(borrowController))),
+                "000000010501020601a0a52cd80b010001020000270100030200020b0001040500ff000000fae2ae0a9f87fd35b5b0e24b47bac796a7eefea1af88d065e77c8cc2239327c5edb3a432268e5831d87899d10eaa10f3ade05038a38251f758e5c0ebc6f780497a95e246eb9449f5e4770916dcd6396a912ce59144191c1204e64559fe8253a0e49e654800000000000000000000000000000000000000000000000000000000"
+            )
+        );
+        swapData.amount = usdc.amount(500);
+        swapData.inToken = address(wausdc);
+
+        PermitSignature memory permit721Params =
+            vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
+
+        vm.prank(user);
+        borrowController.adjustPosition(
+            positionId,
+            beforeLoanPosition.collateralAmount - collateralAmount,
+            debtAmount,
+            type(uint256).max,
+            0,
+            beforeLoanPosition.expiredWith,
+            swapData,
+            permit721Params,
+            emptyERC20PermitParams,
+            emptyERC20PermitParams
+        );
+
+        LoanPosition memory afterLoanPosition = loanPositionManager.getPosition(positionId);
+
+        assertEq(usdc.balanceOf(user), beforeUSDCBalance, "USDC_BALANCE");
+        assertGe(user.balance, beforeETHBalance, "NATIVE_BALANCE");
+        assertEq(beforeLoanPosition.expiredWith, afterLoanPosition.expiredWith, "POSITION_EXPIRE_EPOCH");
+        assertEq(
+            beforeLoanPosition.collateralAmount - collateralAmount,
+            afterLoanPosition.collateralAmount,
+            "POSITION_COLLATERAL_AMOUNT"
+        );
+        assertLe(afterLoanPosition.debtAmount, debtAmount, "POSITION_DEBT_AMOUNT");
+        assertGe(afterLoanPosition.debtAmount, 0.7 ether, "POSITION_DEBT_AMOUNT");
+        assertEq(beforeLoanPosition.collateralToken, afterLoanPosition.collateralToken, "POSITION_COLLATERAL_TOKEN");
+        assertEq(beforeLoanPosition.debtToken, afterLoanPosition.debtToken, "POSITION_DEBT_TOKEN");
+    }
+
+    function testRepayAllWithCollateral() public {
+        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 0.2 ether, 2);
+
+        uint256 beforeUSDCBalance = usdc.balanceOf(user);
+        uint256 beforeETHBalance = user.balance;
+        LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
+        uint256 collateralAmount = usdc.amount(500);
+
+        IBorrowController.SwapData memory swapData;
+        swapData.data = fromHex(
+            string.concat(
+                "83bd37f9000a000b041dcd65000803608bda99eed8c0028f5c00017F137D1D8d20BA54004Ba358E9C229DA26FA3Fa900000001",
+                this.remove0x(Strings.toHexString(address(borrowController))),
+                "000000010501020601a0a52cd80b010001020000270100030200020b0001040500ff000000fae2ae0a9f87fd35b5b0e24b47bac796a7eefea1af88d065e77c8cc2239327c5edb3a432268e5831d87899d10eaa10f3ade05038a38251f758e5c0ebc6f780497a95e246eb9449f5e4770916dcd6396a912ce59144191c1204e64559fe8253a0e49e654800000000000000000000000000000000000000000000000000000000"
+            )
+        );
+        swapData.amount = usdc.amount(500);
+        swapData.inToken = address(wausdc);
+
+        PermitSignature memory permit721Params =
+            vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
+
+        vm.prank(user);
+        borrowController.adjustPosition(
+            positionId,
+            beforeLoanPosition.collateralAmount - collateralAmount,
+            0,
+            type(uint256).max,
+            0,
+            beforeLoanPosition.expiredWith,
+            swapData,
+            permit721Params,
+            emptyERC20PermitParams,
+            emptyERC20PermitParams
+        );
+
+        LoanPosition memory afterLoanPosition = loanPositionManager.getPosition(positionId);
+
+        assertEq(usdc.balanceOf(user), beforeUSDCBalance, "USDC_BALANCE");
+        assertGe(user.balance, beforeETHBalance, "NATIVE_BALANCE");
+        assertEq(Epoch.wrap(645), afterLoanPosition.expiredWith, "POSITION_EXPIRE_EPOCH");
+        assertEq(
+            beforeLoanPosition.collateralAmount - usdc.amount(500),
+            afterLoanPosition.collateralAmount,
+            "POSITION_COLLATERAL_AMOUNT"
+        );
+        assertEq(afterLoanPosition.debtAmount, 0, "POSITION_DEBT_AMOUNT");
+        assertEq(beforeLoanPosition.collateralToken, afterLoanPosition.collateralToken, "POSITION_COLLATERAL_TOKEN");
+        assertEq(beforeLoanPosition.debtToken, afterLoanPosition.debtToken, "POSITION_DEBT_TOKEN");
+    }
+
+    function testRepayWithLeftCollateral() public {
+        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 2);
+
+        uint256 beforeUSDCBalance = usdc.balanceOf(user);
+        uint256 beforeETHBalance = user.balance;
+        LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
+        uint256 collateralAmount = usdc.amount(5000);
+        uint256 maxDebtAmount = 0.75 ether;
+
+        IBorrowController.SwapData memory swapData;
+        swapData.data = fromHex(
+            string.concat(
+                "83bd37f9000a000b041dcd65000803608bda99eed8c0028f5c00017F137D1D8d20BA54004Ba358E9C229DA26FA3Fa900000001",
+                this.remove0x(Strings.toHexString(address(borrowController))),
+                "000000010501020601a0a52cd80b010001020000270100030200020b0001040500ff000000fae2ae0a9f87fd35b5b0e24b47bac796a7eefea1af88d065e77c8cc2239327c5edb3a432268e5831d87899d10eaa10f3ade05038a38251f758e5c0ebc6f780497a95e246eb9449f5e4770916dcd6396a912ce59144191c1204e64559fe8253a0e49e654800000000000000000000000000000000000000000000000000000000"
+            )
+        );
+        swapData.amount = usdc.amount(500);
+        swapData.inToken = address(wausdc);
+
+        PermitSignature memory permit721Params =
+            vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
+
+        vm.prank(user);
+        borrowController.adjustPosition(
+            positionId,
+            beforeLoanPosition.collateralAmount - collateralAmount,
+            maxDebtAmount,
+            type(uint256).max,
+            0,
+            beforeLoanPosition.expiredWith,
+            swapData,
+            permit721Params,
+            emptyERC20PermitParams,
+            emptyERC20PermitParams
+        );
+
+        LoanPosition memory afterLoanPosition = loanPositionManager.getPosition(positionId);
+
+        assertEq(usdc.balanceOf(user), beforeUSDCBalance + collateralAmount - swapData.amount, "USDC_BALANCE");
+        assertGe(user.balance, beforeETHBalance, "NATIVE_BALANCE");
+        assertEq(beforeLoanPosition.expiredWith, afterLoanPosition.expiredWith, "POSITION_EXPIRE_EPOCH");
+        assertEq(
+            beforeLoanPosition.collateralAmount - collateralAmount,
+            afterLoanPosition.collateralAmount,
+            "POSITION_COLLATERAL_AMOUNT"
+        );
+        assertLe(afterLoanPosition.debtAmount, maxDebtAmount, "POSITION_DEBT_AMOUNT");
+        assertGe(afterLoanPosition.debtAmount, 0.7 ether, "POSITION_DEBT_AMOUNT");
+        assertEq(beforeLoanPosition.collateralToken, afterLoanPosition.collateralToken, "POSITION_COLLATERAL_TOKEN");
+        assertEq(beforeLoanPosition.debtToken, afterLoanPosition.debtToken, "POSITION_DEBT_TOKEN");
+    }
+
     function testExpiredBorrowMore() public {
         uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 2);
         LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
