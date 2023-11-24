@@ -53,8 +53,9 @@ contract CouponMarketRouterIntegrationTest is Test {
         ForkUtils.fork(vm, Constants.FORK_BLOCK_NUMBER);
         user = vm.addr(1);
         wrapper = new CouponWrapper(Constants.COUPON_COUPON_MANAGER, Constants.WRAPPED1155_FACTORY);
-        router =
-        new CouponMarketRouter(Constants.WRAPPED1155_FACTORY, address(cloberFactory), Constants.COUPON_COUPON_MANAGER, address(wrapper));
+        router = new CouponMarketRouter(
+            Constants.WRAPPED1155_FACTORY, address(cloberFactory), Constants.COUPON_COUPON_MANAGER, address(wrapper)
+        );
         epoch = EpochLibrary.current();
         couponKey1 = CouponKey({asset: address(wethSubstitute), epoch: epoch});
         ethBestBid = market1.bestPriceIndex(true);

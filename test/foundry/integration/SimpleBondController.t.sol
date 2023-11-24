@@ -43,8 +43,13 @@ contract SimpleBondControllerIntegrationTest is Test, ERC1155Holder {
         ForkUtils.fork(vm, Constants.FORK_BLOCK_NUMBER);
         user = vm.addr(1);
         couponWrapper = new CouponWrapper(Constants.COUPON_COUPON_MANAGER, Constants.WRAPPED1155_FACTORY);
-        controller =
-        new SimpleBondController(Constants.WETH, Constants.COUPON_BOND_POSITION_MANAGER, Constants.COUPON_COUPON_MANAGER, address(couponWrapper), address(this));
+        controller = new SimpleBondController(
+            Constants.WETH,
+            Constants.COUPON_BOND_POSITION_MANAGER,
+            Constants.COUPON_COUPON_MANAGER,
+            address(couponWrapper),
+            address(this)
+        );
 
         vm.deal(user, 2000 ether);
         vm.prank(user);

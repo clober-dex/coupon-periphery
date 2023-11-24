@@ -9,6 +9,7 @@ import {
   WRAPPED1155_FACTORY,
   deployWithVerify,
   TOKEN_KEYS,
+  ODOS_ROUTER,
 } from '../utils'
 
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -26,6 +27,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
     COUPON_MANAGER[chainId],
     TOKENS[chainId][TOKEN_KEYS.WETH],
     LOAN_POSITION_MANAGER[chainId],
+    ODOS_ROUTER[chainId],
   ]
   await deployWithVerify(hre, 'BorrowController', args)
 }

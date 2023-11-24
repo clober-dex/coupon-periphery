@@ -39,15 +39,7 @@ export const WRAPPED1155_FACTORY: { [chainId: number]: Address } = {
   [arbitrum.id]: '0xfcBE16BfD991E4949244E59d9b524e6964b8BB75',
 }
 
-export const REPAY_ROUTER: { [chainId: number]: Address } = {
-  [arbitrum.id]: '0xa669e7A0d4b3e4Fa48af2dE86BD4CD7126Be4e13',
-}
-
-export const LEVERAGE_ROUTER: { [chainId: number]: Address } = {
-  [arbitrum.id]: '0xa669e7A0d4b3e4Fa48af2dE86BD4CD7126Be4e13',
-}
-
-export const LIQUIDATOR_ROUTER: { [chainId: number]: Address } = {
+export const ODOS_ROUTER: { [chainId: number]: Address } = {
   [arbitrum.id]: '0xa669e7A0d4b3e4Fa48af2dE86BD4CD7126Be4e13',
 }
 
