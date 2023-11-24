@@ -127,7 +127,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         ERC20PermitParams calldata collateralPermitParams,
         ERC20PermitParams calldata debtPermitParams
     ) external payable nonReentrant wrapETH onlyPositionOwner(positionId) {
-        positionPermitParams.tryPermitERC721(_loanPositionManager, positionId, address(this));
+        positionPermitParams.tryPermit(_loanPositionManager, positionId, address(this));
         LoanPosition memory position = _loanPositionManager.getPosition(positionId);
         collateralPermitParams.tryPermit(_getUnderlyingToken(position.collateralToken), msg.sender, address(this));
         debtPermitParams.tryPermit(_getUnderlyingToken(position.debtToken), msg.sender, address(this));

@@ -90,9 +90,7 @@ contract CouponMarketRouterIntegrationTest is Test {
 
         wrappedCoupon1.approve(address(router), 1 ether);
         vm.recordLogs();
-        router.marketSellCoupons(
-            _buildETHParams(2 ether), vm.signERC1155Permit(1, couponManager, address(router), true)
-        );
+        router.marketSellCoupons(_buildETHParams(2 ether), vm.signPermit(1, couponManager, address(router), true));
         Vm.Log[] memory takeOrders = vm.getRecordedLogs().findLogsByEvent(CloberOrderBook.TakeOrder.selector);
 
         (, uint64 rawAmount,) = abi.decode(takeOrders[0].data, (uint16, uint64, uint8));
@@ -125,9 +123,7 @@ contract CouponMarketRouterIntegrationTest is Test {
 
         wrappedCoupon1.approve(address(router), 1 ether);
         vm.recordLogs();
-        router.marketSellCoupons(
-            _buildETHParams(2 ether), vm.signERC1155Permit(1, couponManager, address(router), true)
-        );
+        router.marketSellCoupons(_buildETHParams(2 ether), vm.signPermit(1, couponManager, address(router), true));
         Vm.Log[] memory takeOrders = vm.getRecordedLogs().findLogsByEvent(CloberOrderBook.TakeOrder.selector);
 
         (, uint64 rawAmount,) = abi.decode(takeOrders[0].data, (uint16, uint64, uint8));
@@ -157,9 +153,7 @@ contract CouponMarketRouterIntegrationTest is Test {
         uint256 beforeRecipientBalance = recipient.balance;
 
         vm.recordLogs();
-        router.marketSellCoupons(
-            _buildETHParams(2 ether), vm.signERC1155Permit(1, couponManager, address(router), true)
-        );
+        router.marketSellCoupons(_buildETHParams(2 ether), vm.signPermit(1, couponManager, address(router), true));
         Vm.Log[] memory takeOrders = vm.getRecordedLogs().findLogsByEvent(CloberOrderBook.TakeOrder.selector);
 
         (, uint64 rawAmount,) = abi.decode(takeOrders[0].data, (uint16, uint64, uint8));
@@ -190,9 +184,7 @@ contract CouponMarketRouterIntegrationTest is Test {
 
         wrappedCoupon1.approve(address(router), 2 ether);
         vm.recordLogs();
-        router.marketSellCoupons(
-            _buildETHParams(2 ether), vm.signERC1155Permit(1, couponManager, address(router), true)
-        );
+        router.marketSellCoupons(_buildETHParams(2 ether), vm.signPermit(1, couponManager, address(router), true));
         Vm.Log[] memory takeOrders = vm.getRecordedLogs().findLogsByEvent(CloberOrderBook.TakeOrder.selector);
 
         (, uint64 rawAmount,) = abi.decode(takeOrders[0].data, (uint16, uint64, uint8));
@@ -230,7 +222,7 @@ contract CouponMarketRouterIntegrationTest is Test {
         ICouponMarketRouter.MarketSellParams[] memory paramsList = new ICouponMarketRouter.MarketSellParams[](2);
         paramsList[0] = _buildETHParams(1 ether);
         paramsList[1] = _buildUSDCParams(1e6);
-        router.batchMarketSellCoupons(paramsList, vm.signERC1155Permit(1, couponManager, address(router), true));
+        router.batchMarketSellCoupons(paramsList, vm.signPermit(1, couponManager, address(router), true));
         Vm.Log[] memory takeOrders = vm.getRecordedLogs().findLogsByEvent(CloberOrderBook.TakeOrder.selector);
 
         (, uint64 rawAmount1,) = abi.decode(takeOrders[0].data, (uint16, uint64, uint8));

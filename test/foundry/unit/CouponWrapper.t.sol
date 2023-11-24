@@ -123,9 +123,7 @@ contract CouponWrapperUnitTest is Test, ERC1155Holder {
 
         (uint256[] memory beforeCouponBalances, uint256[] memory beforeWrappedCouponBalances) = _getBalances(user);
 
-        couponWrapper.wrapWithPermit(
-            vm.signERC1155Permit(1, couponManager, address(couponWrapper), true), coupons, user
-        );
+        couponWrapper.wrapWithPermit(vm.signPermit(1, couponManager, address(couponWrapper), true), coupons, user);
 
         (uint256[] memory afterCouponBalances, uint256[] memory afterWrappedCouponBalances) = _getBalances(user);
 

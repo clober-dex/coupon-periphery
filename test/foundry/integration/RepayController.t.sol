@@ -190,7 +190,7 @@ contract RepayAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceiver, 
         uint16 loanEpochs
     ) internal returns (uint256 positionId) {
         positionId = loanPositionManager.nextId();
-        ERC20PermitParams memory permitParams = vm.signERC20Permit(
+        ERC20PermitParams memory permitParams = vm.signPermit(
             1,
             IERC20Permit(AaveTokenSubstitute(payable(collateralToken)).underlyingToken()),
             address(borrowController),
@@ -254,7 +254,7 @@ contract RepayAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceiver, 
         );
 
         PermitSignature memory permit721Params =
-            vm.signERC721Permit(1, loanPositionManager, address(repayAdapter), positionId);
+            vm.signPermit(1, loanPositionManager, address(repayAdapter), positionId);
 
         vm.prank(user);
         repayAdapter.repayWithCollateral(positionId, collateralAmount, 1 ether - maxDebtAmount, data, permit721Params);
@@ -292,7 +292,7 @@ contract RepayAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceiver, 
         );
 
         PermitSignature memory permit721Params =
-            vm.signERC721Permit(1, loanPositionManager, address(repayAdapter), positionId);
+            vm.signPermit(1, loanPositionManager, address(repayAdapter), positionId);
 
         vm.prank(user);
         repayAdapter.repayWithCollateral(positionId, collateralAmount, 1 ether - maxDebtAmount, data, permit721Params);
@@ -330,7 +330,7 @@ contract RepayAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceiver, 
         );
 
         PermitSignature memory permit721Params =
-            vm.signERC721Permit(1, loanPositionManager, address(repayAdapter), positionId);
+            vm.signPermit(1, loanPositionManager, address(repayAdapter), positionId);
 
         vm.prank(user);
         repayAdapter.repayWithCollateral(positionId, collateralAmount, 0.2 ether - maxDebtAmount, data, permit721Params);
@@ -373,7 +373,7 @@ contract RepayAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceiver, 
     //        );
     //
     //        PermitSignature memory permit721Params =
-    //            vm.signERC721Permit(1, loanPositionManager, address(repayAdapter), positionId);
+    //            vm.signPermit(1, loanPositionManager, address(repayAdapter), positionId);
     //
     //        vm.startPrank(user);
     //        usdc.approve(address(repayAdapter), 7000000);

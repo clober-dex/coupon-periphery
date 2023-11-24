@@ -107,7 +107,7 @@ contract DepositController is IDepositController, Controller, IPositionLocker {
         uint256 maxPayInterest,
         PermitSignature calldata positionPermitParams
     ) external nonReentrant onlyPositionOwner(positionId) {
-        positionPermitParams.tryPermitERC721(_bondPositionManager, positionId, address(this));
+        positionPermitParams.tryPermit(_bondPositionManager, positionId, address(this));
         BondPosition memory position = _bondPositionManager.getPosition(positionId);
 
         bytes memory lockData = abi.encode(position.amount - withdrawAmount, position.expiredWith, maxPayInterest, 0);
@@ -121,7 +121,7 @@ contract DepositController is IDepositController, Controller, IPositionLocker {
         nonReentrant
         onlyPositionOwner(positionId)
     {
-        positionPermitParams.tryPermitERC721(_bondPositionManager, positionId, address(this));
+        positionPermitParams.tryPermit(_bondPositionManager, positionId, address(this));
         BondPosition memory position = _bondPositionManager.getPosition(positionId);
         if (position.expiredWith >= EpochLibrary.current()) revert NotExpired();
 

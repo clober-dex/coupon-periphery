@@ -191,7 +191,7 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         uint8 loanEpochs
     ) internal returns (uint256 positionId) {
         positionId = loanPositionManager.nextId();
-        ERC20PermitParams memory permitParams = vm.signERC20Permit(
+        ERC20PermitParams memory permitParams = vm.signPermit(
             1,
             IERC20Permit(AaveTokenSubstitute(payable(collateralToken)).underlyingToken()),
             address(borrowController),

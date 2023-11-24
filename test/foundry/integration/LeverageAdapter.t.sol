@@ -199,7 +199,7 @@ contract LeverageAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceive
         uint16 loanEpochs
     ) internal returns (uint256 positionId) {
         positionId = loanPositionManager.nextId();
-        ERC20PermitParams memory permitParams = vm.signERC20Permit(
+        ERC20PermitParams memory permitParams = vm.signPermit(
             1,
             IERC20Permit(AaveTokenSubstitute(payable(collateralToken)).underlyingToken()),
             address(borrowController),
@@ -226,7 +226,7 @@ contract LeverageAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceive
         uint256 beforeETHBalance = user.balance;
 
         uint256 positionId = loanPositionManager.nextId();
-        ERC20PermitParams memory permitParams = vm.signERC20Permit(
+        ERC20PermitParams memory permitParams = vm.signPermit(
             1,
             IERC20Permit(AaveTokenSubstitute(payable(wausdc)).underlyingToken()),
             address(leverageAdapter),
@@ -274,7 +274,7 @@ contract LeverageAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceive
         uint256 collateralAmount = 0.4 ether;
         uint256 borrowAmount = usdc.amount(550);
 
-        ERC20PermitParams memory permitParams = vm.signERC20Permit(
+        ERC20PermitParams memory permitParams = vm.signPermit(
             1,
             IERC20Permit(AaveTokenSubstitute(payable(wausdc)).underlyingToken()),
             address(leverageAdapter),
@@ -282,7 +282,7 @@ contract LeverageAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceive
         );
 
         PermitSignature memory permit721Params =
-            vm.signERC721Permit(1, loanPositionManager, address(leverageAdapter), positionId);
+            vm.signPermit(1, loanPositionManager, address(leverageAdapter), positionId);
 
         bytes memory data = fromHex(
             string.concat(

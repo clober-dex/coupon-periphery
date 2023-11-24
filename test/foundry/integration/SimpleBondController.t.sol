@@ -58,7 +58,7 @@ contract SimpleBondControllerIntegrationTest is Test, ERC1155Holder {
 
         uint256 beforeWEthBalance = weth.balanceOf(user);
         uint256 positionId = controller.mint{value: 0.5 ether}(
-            vm.signERC20Permit(1, IERC20Permit(address(weth)), address(controller), 0.5 ether),
+            vm.signPermit(1, IERC20Permit(address(weth)), address(controller), 0.5 ether),
             wethSubstitute,
             1 ether,
             currentEpoch.add(1)
@@ -89,7 +89,7 @@ contract SimpleBondControllerIntegrationTest is Test, ERC1155Holder {
 
         uint256 beforeWEthBalance = weth.balanceOf(user);
         uint256 positionId = controller.mintAndWrapCoupons{value: 0.5 ether}(
-            vm.signERC20Permit(1, IERC20Permit(address(weth)), address(controller), 0.5 ether),
+            vm.signPermit(1, IERC20Permit(address(weth)), address(controller), 0.5 ether),
             wethSubstitute,
             1 ether,
             currentEpoch.add(1)
@@ -117,7 +117,7 @@ contract SimpleBondControllerIntegrationTest is Test, ERC1155Holder {
 
     function _mint() internal returns (uint256) {
         return controller.mint{value: 0.5 ether}(
-            vm.signERC20Permit(1, IERC20Permit(address(weth)), address(controller), 0.5 ether),
+            vm.signPermit(1, IERC20Permit(address(weth)), address(controller), 0.5 ether),
             wethSubstitute,
             1 ether,
             currentEpoch.add(1)
@@ -130,8 +130,8 @@ contract SimpleBondControllerIntegrationTest is Test, ERC1155Holder {
 
         uint256 beforeWEthBalance = weth.balanceOf(user);
         controller.adjust{value: 0.5 ether}(
-            vm.signERC20Permit(1, IERC20Permit(address(weth)), address(controller), 0.5 ether),
-            vm.signERC721Permit(1, bondPositionManager, address(controller), positionId),
+            vm.signPermit(1, IERC20Permit(address(weth)), address(controller), 0.5 ether),
+            vm.signPermit(1, bondPositionManager, address(controller), positionId),
             emptyPermitSignature,
             positionId,
             2 ether,
@@ -163,9 +163,9 @@ contract SimpleBondControllerIntegrationTest is Test, ERC1155Holder {
 
         uint256 beforeWEthBalance = weth.balanceOf(user);
         controller.adjust{value: 0.5 ether}(
-            vm.signERC20Permit(1, IERC20Permit(address(weth)), address(controller), 0.5 ether),
-            vm.signERC721Permit(1, bondPositionManager, address(controller), positionId),
-            vm.signERC1155Permit(1, couponManager, address(controller), true),
+            vm.signPermit(1, IERC20Permit(address(weth)), address(controller), 0.5 ether),
+            vm.signPermit(1, bondPositionManager, address(controller), positionId),
+            vm.signPermit(1, couponManager, address(controller), true),
             positionId,
             2 ether,
             currentEpoch
@@ -198,8 +198,8 @@ contract SimpleBondControllerIntegrationTest is Test, ERC1155Holder {
         uint256 beforeEthBalance = user.balance;
         controller.adjust(
             emptyERC20PermitParams,
-            vm.signERC721Permit(1, bondPositionManager, address(controller), positionId),
-            vm.signERC1155Permit(1, couponManager, address(controller), true),
+            vm.signPermit(1, bondPositionManager, address(controller), positionId),
+            vm.signPermit(1, couponManager, address(controller), true),
             positionId,
             0.5 ether,
             currentEpoch.add(2)
@@ -233,8 +233,8 @@ contract SimpleBondControllerIntegrationTest is Test, ERC1155Holder {
         uint256 beforeEthBalance = user.balance;
         controller.adjust(
             emptyERC20PermitParams,
-            vm.signERC721Permit(1, bondPositionManager, address(controller), positionId),
-            vm.signERC1155Permit(1, couponManager, address(controller), true),
+            vm.signPermit(1, bondPositionManager, address(controller), positionId),
+            vm.signPermit(1, couponManager, address(controller), true),
             positionId,
             0.5 ether,
             currentEpoch
@@ -266,8 +266,8 @@ contract SimpleBondControllerIntegrationTest is Test, ERC1155Holder {
 
         uint256 beforeWEthBalance = weth.balanceOf(user);
         controller.adjustAndWrapCoupons{value: 0.5 ether}(
-            vm.signERC20Permit(1, IERC20Permit(address(weth)), address(controller), 0.5 ether),
-            vm.signERC721Permit(1, bondPositionManager, address(controller), positionId),
+            vm.signPermit(1, IERC20Permit(address(weth)), address(controller), 0.5 ether),
+            vm.signPermit(1, bondPositionManager, address(controller), positionId),
             emptyPermitSignature,
             positionId,
             2 ether,
@@ -303,9 +303,9 @@ contract SimpleBondControllerIntegrationTest is Test, ERC1155Holder {
 
         uint256 beforeWEthBalance = weth.balanceOf(user);
         controller.adjustAndWrapCoupons{value: 0.5 ether}(
-            vm.signERC20Permit(1, IERC20Permit(address(weth)), address(controller), 0.5 ether),
-            vm.signERC721Permit(1, bondPositionManager, address(controller), positionId),
-            vm.signERC1155Permit(1, couponManager, address(controller), true),
+            vm.signPermit(1, IERC20Permit(address(weth)), address(controller), 0.5 ether),
+            vm.signPermit(1, bondPositionManager, address(controller), positionId),
+            vm.signPermit(1, couponManager, address(controller), true),
             positionId,
             2 ether,
             currentEpoch
@@ -342,8 +342,8 @@ contract SimpleBondControllerIntegrationTest is Test, ERC1155Holder {
         uint256 beforeEthBalance = user.balance;
         controller.adjustAndWrapCoupons(
             emptyERC20PermitParams,
-            vm.signERC721Permit(1, bondPositionManager, address(controller), positionId),
-            vm.signERC1155Permit(1, couponManager, address(controller), true),
+            vm.signPermit(1, bondPositionManager, address(controller), positionId),
+            vm.signPermit(1, couponManager, address(controller), true),
             positionId,
             0.5 ether,
             currentEpoch.add(2)
@@ -381,8 +381,8 @@ contract SimpleBondControllerIntegrationTest is Test, ERC1155Holder {
         uint256 beforeEthBalance = user.balance;
         controller.adjustAndWrapCoupons(
             emptyERC20PermitParams,
-            vm.signERC721Permit(1, bondPositionManager, address(controller), positionId),
-            vm.signERC1155Permit(1, couponManager, address(controller), true),
+            vm.signPermit(1, bondPositionManager, address(controller), positionId),
+            vm.signPermit(1, couponManager, address(controller), true),
             positionId,
             0.5 ether,
             currentEpoch
