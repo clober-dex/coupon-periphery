@@ -100,7 +100,8 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             Constants.CLOBER_FACTORY,
             address(couponManager),
             Constants.WETH,
-            address(loanPositionManager)
+            address(loanPositionManager),
+            Constants.ODOS_V2_SWAP_ROUTER
         );
 
         couponLiquidator =
@@ -197,6 +198,8 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             address(borrowController),
             collateralAmount
         );
+
+        IBorrowController.SwapData memory swapData;
         vm.prank(borrower);
         borrowController.borrow(
             collateralToken,
@@ -205,6 +208,7 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             borrowAmount,
             type(uint256).max,
             EpochLibrary.current().add(loanEpochs - 1),
+            swapData,
             permitParams
         );
     }

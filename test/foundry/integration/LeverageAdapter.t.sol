@@ -102,7 +102,8 @@ contract LeverageAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceive
             Constants.CLOBER_FACTORY,
             address(couponManager),
             Constants.WETH,
-            address(loanPositionManager)
+            address(loanPositionManager),
+            Constants.ODOS_V2_SWAP_ROUTER
         );
         leverageAdapter = new LeverageAdapter(
             Constants.WRAPPED1155_FACTORY,
@@ -205,6 +206,7 @@ contract LeverageAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceive
             address(borrowController),
             collateralAmount
         );
+        IBorrowController.SwapData memory swapData;
         vm.prank(borrower);
         borrowController.borrow(
             collateralToken,
@@ -213,6 +215,7 @@ contract LeverageAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceive
             borrowAmount,
             type(uint256).max,
             EpochLibrary.current().add(loanEpochs - 1),
+            swapData,
             permitParams
         );
     }

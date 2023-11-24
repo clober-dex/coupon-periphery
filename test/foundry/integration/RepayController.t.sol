@@ -31,6 +31,7 @@ import {CloberOrderBook} from "../../../contracts/external/clober/CloberOrderBoo
 import {RepayAdapter} from "../../../contracts/RepayAdapter.sol";
 import {BorrowController} from "../../../contracts/BorrowController.sol";
 import {IRepayAdapter} from "../../../contracts/interfaces/IRepayAdapter.sol";
+import {IBorrowController} from "../../../contracts/interfaces/IBorrowController.sol";
 import {AaveTokenSubstitute} from "../../../contracts/AaveTokenSubstitute.sol";
 
 contract RepayAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceiver, ERC1155Holder {
@@ -101,7 +102,8 @@ contract RepayAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceiver, 
             Constants.CLOBER_FACTORY,
             address(couponManager),
             Constants.WETH,
-            address(loanPositionManager)
+            address(loanPositionManager),
+            Constants.ODOS_V2_SWAP_ROUTER
         );
         repayAdapter = new RepayAdapter(
             Constants.WRAPPED1155_FACTORY,
@@ -196,6 +198,7 @@ contract RepayAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceiver, 
             address(borrowController),
             collateralAmount
         );
+        IBorrowController.SwapData memory swapData;
         vm.prank(borrower);
         borrowController.borrow(
             collateralToken,
@@ -204,6 +207,7 @@ contract RepayAdapterIntegrationTest is Test, CloberMarketSwapCallbackReceiver, 
             borrowAmount,
             type(uint256).max,
             EpochLibrary.current().add(loanEpochs - 1),
+            swapData,
             permitParams
         );
     }

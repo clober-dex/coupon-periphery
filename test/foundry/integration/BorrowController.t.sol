@@ -101,7 +101,8 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             Constants.CLOBER_FACTORY,
             address(couponManager),
             Constants.WETH,
-            address(loanPositionManager)
+            address(loanPositionManager),
+            Constants.ODOS_V2_SWAP_ROUTER
         );
 
         IERC20(wausdc).transfer(address(assetPool), usdc.amount(1_000));
@@ -187,6 +188,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             address(borrowController),
             collateralAmount
         );
+        IBorrowController.SwapData memory swapData;
         vm.prank(borrower);
         borrowController.borrow(
             collateralToken,
@@ -195,6 +197,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             borrowAmount,
             type(uint256).max,
             EpochLibrary.current().add(loanEpochs - 1),
+            swapData,
             permitParams
         );
     }
@@ -230,6 +233,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
+        IBorrowController.SwapData memory swapData;
         vm.prank(user);
         borrowController.adjustPosition(
             positionId,
@@ -238,6 +242,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             type(uint256).max,
             0,
             beforeLoanPosition.expiredWith,
+            swapData,
             permit721Params,
             emptyERC20PermitParams,
             emptyERC20PermitParams
@@ -269,6 +274,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         ERC20PermitParams memory permit20Params = vm.signPermit(
             1, IERC20Permit(IAaveTokenSubstitute(wausdc).underlyingToken()), address(borrowController), collateralAmount
         );
+        IBorrowController.SwapData memory swapData;
         vm.prank(user);
         borrowController.adjustPosition(
             positionId,
@@ -277,6 +283,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             type(uint256).max,
             0,
             beforeLoanPosition.expiredWith,
+            swapData,
             permit721Params,
             permit20Params,
             emptyERC20PermitParams
@@ -305,7 +312,8 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         uint256 collateralAmount = usdc.amount(123);
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
-        vm.prank(user);
+
+        IBorrowController.SwapData memory swapData;        vm.prank(user);
         borrowController.adjustPosition(
             positionId,
             beforeLoanPosition.collateralAmount - collateralAmount,
@@ -313,6 +321,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             type(uint256).max,
             0,
             beforeLoanPosition.expiredWith,
+            swapData,
             permit721Params,
             emptyERC20PermitParams,
             emptyERC20PermitParams
@@ -342,6 +351,8 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         uint256 maxPayInterest = 0.04 ether * uint256(epochs);
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
+
+        IBorrowController.SwapData memory swapData;
         vm.startPrank(user);
         weth.approve(address(borrowController), maxPayInterest);
         borrowController.adjustPosition{value: maxPayInterest}(
@@ -351,6 +362,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             maxPayInterest,
             0,
             beforeLoanPosition.expiredWith.add(epochs),
+            swapData,
             permit721Params,
             emptyERC20PermitParams,
             emptyERC20PermitParams
@@ -378,6 +390,8 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         uint256 minEarnInterest = 0.02 ether * epochs - 0.01 ether;
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
+
+        IBorrowController.SwapData memory swapData;
         vm.prank(user);
         borrowController.adjustPosition(
             positionId,
@@ -386,6 +400,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             type(uint256).max,
             0,
             beforeLoanPosition.expiredWith.sub(epochs),
+            swapData,
             permit721Params,
             emptyERC20PermitParams,
             emptyERC20PermitParams
@@ -414,6 +429,8 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         ERC20PermitParams memory permit20Params = vm.signPermit(
             1, IERC20Permit(IAaveTokenSubstitute(waweth).underlyingToken()), address(borrowController), repayAmount
         );
+
+        IBorrowController.SwapData memory swapData;
         vm.prank(user);
         borrowController.adjustPosition{value: repayAmount}(
             positionId,
@@ -422,6 +439,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             type(uint256).max,
             0,
             beforeLoanPosition.expiredWith,
+            swapData,
             permit721Params,
             emptyERC20PermitParams,
             permit20Params
@@ -450,6 +468,8 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         ERC20PermitParams memory permit20Params = vm.signPermit(
             1, IERC20Permit(IAaveTokenSubstitute(waweth).underlyingToken()), address(borrowController), repayAmount
         );
+
+        IBorrowController.SwapData memory swapData;
         vm.prank(user);
         borrowController.adjustPosition{value: repayAmount}(
             positionId,
@@ -458,6 +478,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             type(uint256).max,
             0,
             beforeLoanPosition.expiredWith,
+            swapData,
             permit721Params,
             emptyERC20PermitParams,
             permit20Params
@@ -474,6 +495,8 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         vm.warp(EpochLibrary.current().add(2).startTime());
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
+
+        IBorrowController.SwapData memory swapData;
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(ILoanPositionManagerTypes.FullRepaymentRequired.selector));
         borrowController.adjustPosition(
@@ -483,6 +506,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             type(uint256).max,
             0,
             beforeLoanPosition.expiredWith,
+            swapData,
             permit721Params,
             emptyERC20PermitParams,
             emptyERC20PermitParams
@@ -497,6 +521,8 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         vm.warp(EpochLibrary.current().add(2).startTime());
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
+
+        IBorrowController.SwapData memory swapData;
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(ILoanPositionManagerTypes.FullRepaymentRequired.selector));
         borrowController.adjustPosition(
@@ -506,6 +532,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             type(uint256).max,
             0,
             beforeLoanPosition.expiredWith,
+            swapData,
             permit721Params,
             emptyERC20PermitParams,
             emptyERC20PermitParams
@@ -519,6 +546,8 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         // loan duration is 2 epochs
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
+
+        IBorrowController.SwapData memory swapData;
         vm.expectRevert(abi.encodeWithSelector(IController.InvalidAccess.selector));
         borrowController.adjustPosition(
             positionId,
@@ -527,6 +556,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             type(uint256).max,
             0,
             beforeLoanPosition.expiredWith,
+            swapData,
             permit721Params,
             emptyERC20PermitParams,
             emptyERC20PermitParams
