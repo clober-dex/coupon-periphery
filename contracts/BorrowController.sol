@@ -44,8 +44,8 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
 
         uint256 positionId;
         address user;
-        SwapData memory swapData;
-        (positionId, user, swapData, data) = abi.decode(data, (uint256, address, SwapData, bytes));
+        SwapParams memory swapData;
+        (positionId, user, swapData, data) = abi.decode(data, (uint256, address, SwapParams, bytes));
         if (positionId == 0) {
             address collateralToken;
             address debtToken;
@@ -113,7 +113,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         uint256 borrowAmount,
         uint256 maxPayInterest,
         Epoch expiredWith,
-        SwapData calldata swapData,
+        SwapParams calldata swapParams,
         ERC20PermitParams calldata collateralPermitParams
     ) external payable nonReentrant wrapETH {
         collateralPermitParams.tryPermit(_getUnderlyingToken(collateralToken), msg.sender, address(this));
@@ -135,7 +135,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         uint256 maxPayInterest,
         uint256 minEarnInterest,
         Epoch expiredWith,
-        SwapData calldata swapData,
+        SwapParams calldata swapParams,
         PermitSignature calldata positionPermitParams,
         ERC20PermitParams calldata collateralPermitParams,
         ERC20PermitParams calldata debtPermitParams
@@ -180,7 +180,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         LoanPosition memory p,
         uint256 maxPay,
         uint256 minEarn,
-        SwapData memory swapData
+        SwapParams memory swapData
     ) internal view returns (bytes memory) {
         bytes memory data = abi.encode(p.collateralAmount, p.debtAmount, p.expiredWith, maxPay, minEarn);
         return abi.encode(id, msg.sender, swapData, data);

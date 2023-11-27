@@ -188,7 +188,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             address(borrowController),
             collateralAmount
         );
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapData;
         vm.prank(borrower);
         borrowController.borrow(
             collateralToken,
@@ -233,7 +233,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapData;
         vm.prank(user);
         borrowController.adjustPosition(
             positionId,
@@ -274,7 +274,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         ERC20PermitParams memory permit20Params = vm.signPermit(
             1, IERC20Permit(IAaveTokenSubstitute(wausdc).underlyingToken()), address(borrowController), collateralAmount
         );
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapData;
         vm.prank(user);
         borrowController.adjustPosition(
             positionId,
@@ -313,7 +313,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
 
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapData;
         vm.prank(user);
         borrowController.adjustPosition(
             positionId,
@@ -353,7 +353,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
 
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapData;
         vm.startPrank(user);
         weth.approve(address(borrowController), maxPayInterest);
         borrowController.adjustPosition{value: maxPayInterest}(
@@ -392,7 +392,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
 
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapData;
         vm.prank(user);
         borrowController.adjustPosition(
             positionId,
@@ -431,7 +431,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             1, IERC20Permit(IAaveTokenSubstitute(waweth).underlyingToken()), address(borrowController), repayAmount
         );
 
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapData;
         vm.prank(user);
         borrowController.adjustPosition{value: repayAmount}(
             positionId,
@@ -470,7 +470,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             1, IERC20Permit(IAaveTokenSubstitute(waweth).underlyingToken()), address(borrowController), repayAmount
         );
 
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapData;
         vm.prank(user);
         borrowController.adjustPosition{value: repayAmount}(
             positionId,
@@ -505,7 +505,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             collateralAmount
         );
 
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapData;
         swapData.data = fromHex(
             string.concat(
                 "83bd37f9000a000b041dcd65000803608bda99eed8c0028f5c00017F137D1D8d20BA54004Ba358E9C229DA26FA3Fa900000001",
@@ -566,7 +566,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
 
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapData;
         swapData.data = fromHex(
             string.concat(
                 "83bd37f9000a000b041dcd65000803608bda99eed8c0028f5c00017F137D1D8d20BA54004Ba358E9C229DA26FA3Fa900000001",
@@ -617,7 +617,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         uint256 collateralAmount = usdc.amount(500);
         uint256 debtAmount = 0.75 ether;
 
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapData;
         swapData.data = fromHex(
             string.concat(
                 "83bd37f9000a000b041dcd65000803608bda99eed8c0028f5c00017F137D1D8d20BA54004Ba358E9C229DA26FA3Fa900000001",
@@ -669,7 +669,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
         uint256 collateralAmount = usdc.amount(500);
 
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapData;
         swapData.data = fromHex(
             string.concat(
                 "83bd37f9000a000b041dcd65000803608bda99eed8c0028f5c00017F137D1D8d20BA54004Ba358E9C229DA26FA3Fa900000001",
@@ -721,7 +721,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         uint256 collateralAmount = usdc.amount(5000);
         uint256 maxDebtAmount = 0.75 ether;
 
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapData;
         swapData.data = fromHex(
             string.concat(
                 "83bd37f9000a000b041dcd65000803608bda99eed8c0028f5c00017F137D1D8d20BA54004Ba358E9C229DA26FA3Fa900000001",
@@ -773,7 +773,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
 
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapData;
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(ILoanPositionManagerTypes.FullRepaymentRequired.selector));
         borrowController.adjustPosition(
@@ -799,7 +799,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
 
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapData;
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(ILoanPositionManagerTypes.FullRepaymentRequired.selector));
         borrowController.adjustPosition(
@@ -824,7 +824,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
 
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapData;
         vm.expectRevert(abi.encodeWithSelector(IController.InvalidAccess.selector));
         borrowController.adjustPosition(
             positionId,

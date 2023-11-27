@@ -199,7 +199,7 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             collateralAmount
         );
 
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapData;
         vm.prank(borrower);
         borrowController.borrow(
             collateralToken,
