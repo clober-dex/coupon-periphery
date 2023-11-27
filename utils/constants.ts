@@ -11,6 +11,12 @@ export const OWNER: { [chainId: number]: Address } = {
   [TESTNET_ID]: '0xa0E3174f4D222C5CBf705A138C6a9369935EeD81',
 }
 
+export const TREASURY: { [chainId: number]: Address } = {
+  [arbitrum.id]: '0x2f1707aed1fb24d07b9b42e4b0bc885f546b4f43',
+  [arbitrumGoerli.id]: '0x000000000000000000000000000000000000dEaD',
+  [TESTNET_ID]: '0x000000000000000000000000000000000000dEaD',
+}
+
 export const ASSET_POOL: { [chainId: number]: Address } = {
   [arbitrum.id]: '0xBA4B7f0Dd297C68Ca472da58CfE1338B9E7A0D9e',
 }
