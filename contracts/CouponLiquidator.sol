@@ -27,7 +27,7 @@ contract CouponLiquidator is ICouponLiquidator, IPositionLocker {
     }
 
     function positionLockAcquired(bytes memory data) external returns (bytes memory) {
-        (uint256 positionId, uint256 swapAmount, bytes memory swapData) = abi.decode(data, (uint256, uint256, bytes));
+        (uint256 positionId, uint256 swapAmount, bytes memory swapParams) = abi.decode(data, (uint256, uint256, bytes));
 
         LoanPosition memory position = _loanPositionManager.getPosition(positionId);
         address inToken = ISubstitute(position.collateralToken).underlyingToken();
@@ -37,7 +37,7 @@ contract CouponLiquidator is ICouponLiquidator, IPositionLocker {
         if (inToken == address(_weth)) {
             _weth.deposit{value: swapAmount}();
         }
-        _swap(inToken, swapAmount, swapData);
+        _swap(inToken, swapAmount, swapParams);
 
         (uint256 liquidationAmount, uint256 repayAmount, uint256 protocolFeeAmount) =
             _loanPositionManager.liquidate(positionId, IERC20(outToken).balanceOf(address(this)));
@@ -60,8 +60,10 @@ contract CouponLiquidator is ICouponLiquidator, IPositionLocker {
         return abi.encode(inToken, outToken);
     }
 
-    function liquidate(uint256 positionId, uint256 swapAmount, bytes memory swapData, address feeRecipient) external {
-        bytes memory lockData = abi.encode(positionId, swapAmount, swapData);
+    function liquidate(uint256 positionId, uint256 swapAmount, bytes memory swapParams, address feeRecipient)
+        external
+    {
+        bytes memory lockData = abi.encode(positionId, swapAmount, swapParams);
         (address collateralToken, address debtToken) =
             abi.decode(_loanPositionManager.lock(lockData), (address, address));
 
@@ -76,9 +78,9 @@ contract CouponLiquidator is ICouponLiquidator, IPositionLocker {
         }
     }
 
-    function _swap(address inToken, uint256 inAmount, bytes memory swapData) internal {
+    function _swap(address inToken, uint256 inAmount, bytes memory swapParams) internal {
         IERC20(inToken).approve(_router, inAmount);
-        (bool success, bytes memory result) = _router.call(swapData);
+        (bool success, bytes memory result) = _router.call(swapParams);
         if (!success) revert CollateralSwapFailed(string(result));
         IERC20(inToken).approve(_router, 0);
     }

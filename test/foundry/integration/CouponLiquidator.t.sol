@@ -199,7 +199,7 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             collateralAmount
         );
 
-        IBorrowController.SwapData memory swapData;
+        IBorrowController.SwapParams memory swapParams;
         vm.prank(borrower);
         borrowController.borrow(
             collateralToken,
@@ -208,7 +208,7 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             borrowAmount,
             type(uint256).max,
             EpochLibrary.current().add(loanEpochs - 1),
-            swapData,
+            swapParams,
             permitParams
         );
     }
