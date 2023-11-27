@@ -113,7 +113,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         uint256 borrowAmount,
         uint256 maxPayInterest,
         Epoch expiredWith,
-        SwapData memory swapData,
+        SwapData calldata swapData,
         ERC20PermitParams calldata collateralPermitParams
     ) external payable nonReentrant wrapETH {
         collateralPermitParams.tryPermit(_getUnderlyingToken(collateralToken), msg.sender, address(this));
@@ -135,7 +135,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         uint256 maxPayInterest,
         uint256 minEarnInterest,
         Epoch expiredWith,
-        SwapData memory swapData,
+        SwapData calldata swapData,
         PermitSignature calldata positionPermitParams,
         ERC20PermitParams calldata collateralPermitParams,
         ERC20PermitParams calldata debtPermitParams

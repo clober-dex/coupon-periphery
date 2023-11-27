@@ -23,7 +23,7 @@ interface IBorrowController is IController {
         uint256 borrowAmount,
         uint256 maxPayInterest,
         Epoch expiredWith,
-        SwapData memory swapData,
+        SwapData calldata swapData,
         ERC20PermitParams calldata collateralPermitParams
     ) external payable;
 
@@ -34,7 +34,7 @@ interface IBorrowController is IController {
         uint256 maxPayInterest,
         uint256 minEarnInterest,
         Epoch expiredWith,
-        SwapData memory swapData,
+        SwapData calldata swapData,
         PermitSignature calldata positionPermitParams,
         ERC20PermitParams calldata collateralPermitParams,
         ERC20PermitParams calldata debtPermitParams
