@@ -188,7 +188,7 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         address collateralToken,
         address borrowToken,
         uint256 collateralAmount,
-        uint256 borrowAmount,
+        uint256 debtAmount,
         uint8 loanEpochs
     ) internal returns (uint256 positionId) {
         positionId = loanPositionManager.nextId();
@@ -205,7 +205,7 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             collateralToken,
             borrowToken,
             collateralAmount,
-            borrowAmount,
+            debtAmount,
             type(uint256).max,
             EpochLibrary.current().add(loanEpochs - 1),
             swapParams,

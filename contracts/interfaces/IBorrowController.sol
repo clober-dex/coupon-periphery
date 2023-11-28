@@ -8,7 +8,7 @@ import {Epoch} from "../libraries/Epoch.sol";
 
 interface IBorrowController is IController {
     struct SwapParams {
-        address inToken;
+        address inSubstitute;
         uint256 amount;
         bytes data;
     }
@@ -20,7 +20,7 @@ interface IBorrowController is IController {
         address collateralToken,
         address debtToken,
         uint256 collateralAmount,
-        uint256 borrowAmount,
+        uint256 debtAmount,
         uint256 maxPayInterest,
         Epoch expiredWith,
         SwapParams calldata swapParams,
@@ -30,7 +30,7 @@ interface IBorrowController is IController {
     function adjustPosition(
         uint256 positionId,
         uint256 collateralAmount,
-        uint256 borrowAmount,
+        uint256 debtAmount,
         uint256 maxPayInterest,
         uint256 minEarnInterest,
         Epoch expiredWith,

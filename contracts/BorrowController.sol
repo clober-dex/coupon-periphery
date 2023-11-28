@@ -73,9 +73,9 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
             _wrapCoupons(couponsToMint);
         }
 
-        if (swapParams.inToken == position.collateralToken) {
+        if (swapParams.inSubstitute == position.collateralToken) {
             _swap(position.collateralToken, position.debtToken, swapParams.amount, swapParams.data);
-        } else if (swapParams.inToken == position.debtToken) {
+        } else if (swapParams.inSubstitute == position.debtToken) {
             _swap(position.debtToken, position.collateralToken, swapParams.amount, swapParams.data);
         }
 
@@ -110,7 +110,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         address collateralToken,
         address debtToken,
         uint256 collateralAmount,
-        uint256 borrowAmount,
+        uint256 debtAmount,
         uint256 maxPayInterest,
         Epoch expiredWith,
         SwapParams calldata swapParams,
@@ -118,7 +118,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
     ) external payable nonReentrant wrapETH {
         collateralPermitParams.tryPermit(_getUnderlyingToken(collateralToken), msg.sender, address(this));
 
-        bytes memory lockData = abi.encode(collateralAmount, borrowAmount, expiredWith, maxPayInterest, 0);
+        bytes memory lockData = abi.encode(collateralAmount, debtAmount, expiredWith, maxPayInterest, 0);
         lockData = abi.encode(0, msg.sender, swapParams, abi.encode(collateralToken, debtToken, lockData));
         bytes memory result = _loanPositionManager.lock(lockData);
         uint256 positionId = abi.decode(result, (uint256));
@@ -131,7 +131,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
     function adjustPosition(
         uint256 positionId,
         uint256 collateralAmount,
-        uint256 borrowAmount,
+        uint256 debtAmount,
         uint256 maxPayInterest,
         uint256 minEarnInterest,
         Epoch expiredWith,
@@ -146,7 +146,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         debtPermitParams.tryPermit(_getUnderlyingToken(position.debtToken), msg.sender, address(this));
 
         position.collateralAmount = collateralAmount;
-        position.debtAmount = borrowAmount;
+        position.debtAmount = debtAmount;
         position.expiredWith = expiredWith;
 
         _loanPositionManager.lock(_encodeAdjustData(positionId, position, maxPayInterest, minEarnInterest, swapParams));
