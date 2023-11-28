@@ -132,8 +132,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         uint256 positionId,
         uint256 collateralAmount,
         uint256 debtAmount,
-        uint256 maxPayInterest,
-        uint256 minEarnInterest,
+        int256 interestThreshold,
         Epoch expiredWith,
         SwapParams calldata swapParams,
         PermitSignature calldata positionPermitParams,
@@ -149,7 +148,15 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         position.debtAmount = debtAmount;
         position.expiredWith = expiredWith;
 
-        _loanPositionManager.lock(_encodeAdjustData(positionId, position, maxPayInterest, minEarnInterest, swapParams));
+        _loanPositionManager.lock(
+            _encodeAdjustData(
+                positionId,
+                position,
+                interestThreshold > 0 ? uint256(interestThreshold) : 0,
+                interestThreshold < 0 ? uint256(-interestThreshold) : 0,
+                swapParams
+            )
+        );
 
         _burnAllSubstitute(position.collateralToken, msg.sender);
         _burnAllSubstitute(position.debtToken, msg.sender);
