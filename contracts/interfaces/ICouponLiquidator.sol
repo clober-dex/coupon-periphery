@@ -6,7 +6,6 @@ import {ERC20PermitParams} from "../libraries/PermitParams.sol";
 
 interface ICouponLiquidator {
     error CollateralSwapFailed(string reason);
-    error ExceedsThreshold();
     error UnsupportedLiquidationType();
 
     enum LiquidationType {
@@ -14,23 +13,13 @@ interface ICouponLiquidator {
         WithOwnLiquidity
     }
 
-    struct LiquidateWithRouterParams {
-        uint256 positionId;
-        uint256 swapAmount;
-        bytes swapData;
-        address recipient;
-    }
-
-    function liquidateWithRouter(LiquidateWithRouterParams calldata params) external;
-
-    struct LiquidateWithOwnLiquidityParams {
-        uint256 positionId;
-        uint256 maxRepayAmount;
-        address recipient;
-    }
+    function liquidateWithRouter(uint256 positionId, uint256 swapAmount, bytes calldata swapData, address recipient)
+        external;
 
     function liquidateWithOwnLiquidity(
         ERC20PermitParams calldata debtPermitParams,
-        LiquidateWithOwnLiquidityParams calldata params
+        uint256 positionId,
+        uint256 maxRepayAmount,
+        address recipient
     ) external payable;
 }

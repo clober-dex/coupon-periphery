@@ -34,34 +34,41 @@ contract CouponLiquidator is ICouponLiquidator, IPositionLocker {
     function positionLockAcquired(bytes memory data) external returns (bytes memory) {
         (LiquidationType liquidationType, bytes memory lockData) = abi.decode(data, (LiquidationType, bytes));
         if (liquidationType == LiquidationType.WithRouter) {
-            return _liquidateWithRouter(abi.decode(lockData, (LiquidateWithRouterParams)));
+            (uint256 positionId, uint256 swapAmount, bytes memory swapData, address recipient) =
+                abi.decode(lockData, (uint256, uint256, bytes, address));
+            return _liquidateWithRouter(positionId, swapAmount, swapData, recipient);
         } else if (liquidationType == LiquidationType.WithOwnLiquidity) {
-            (address payer, LiquidateWithOwnLiquidityParams memory params) =
-                abi.decode(lockData, (address, LiquidateWithOwnLiquidityParams));
-            return _liquidateWithOwnLiquidity(payer, params);
+            (address payer, uint256 positionId, uint256 maxRepayAmount, address recipient) =
+                abi.decode(lockData, (address, uint256, uint256, address));
+            return _liquidateWithOwnLiquidity(payer, positionId, maxRepayAmount, recipient);
         } else {
             revert UnsupportedLiquidationType();
         }
     }
 
-    function liquidateWithRouter(LiquidateWithRouterParams calldata params) external {
-        bytes memory lockData = abi.encode(params);
+    function liquidateWithRouter(uint256 positionId, uint256 swapAmount, bytes calldata swapData, address recipient)
+        external
+    {
+        bytes memory lockData = abi.encode(positionId, swapAmount, swapData, recipient);
         _loanPositionManager.lock(abi.encode(LiquidationType.WithRouter, lockData));
     }
 
-    function _liquidateWithRouter(LiquidateWithRouterParams memory params) internal returns (bytes memory) {
-        LoanPosition memory position = _loanPositionManager.getPosition(params.positionId);
+    function _liquidateWithRouter(uint256 positionId, uint256 swapAmount, bytes memory swapData, address recipient)
+        internal
+        returns (bytes memory)
+    {
+        LoanPosition memory position = _loanPositionManager.getPosition(positionId);
         address inToken = ISubstitute(position.collateralToken).underlyingToken();
         address outToken = ISubstitute(position.debtToken).underlyingToken();
-        _loanPositionManager.withdrawToken(position.collateralToken, address(this), params.swapAmount);
+        _loanPositionManager.withdrawToken(position.collateralToken, address(this), swapAmount);
         _burnAllSubstitute(position.collateralToken, address(this));
         if (inToken == address(_weth)) {
-            _weth.deposit{value: params.swapAmount}();
+            _weth.deposit{value: swapAmount}();
         }
-        _swap(inToken, params.swapAmount, params.swapData);
+        _swap(inToken, swapAmount, swapData);
 
         (uint256 liquidationAmount, uint256 repayAmount, uint256 protocolFeeAmount) =
-            _loanPositionManager.liquidate(params.positionId, IERC20(outToken).balanceOf(address(this)));
+            _loanPositionManager.liquidate(positionId, IERC20(outToken).balanceOf(address(this)));
 
         IERC20(outToken).approve(position.debtToken, repayAmount);
         ISubstitute(position.debtToken).mint(repayAmount, address(this));
@@ -70,38 +77,40 @@ contract CouponLiquidator is ICouponLiquidator, IPositionLocker {
 
         uint256 debtAmount = IERC20(outToken).balanceOf(address(this));
         if (debtAmount > 0) {
-            IERC20(outToken).safeTransfer(params.recipient, debtAmount);
+            IERC20(outToken).safeTransfer(recipient, debtAmount);
         }
 
-        uint256 collateralAmount = liquidationAmount - protocolFeeAmount - params.swapAmount;
+        uint256 collateralAmount = liquidationAmount - protocolFeeAmount - swapAmount;
 
         _loanPositionManager.withdrawToken(position.collateralToken, address(this), collateralAmount);
-        _burnAllSubstitute(position.collateralToken, params.recipient);
+        _burnAllSubstitute(position.collateralToken, recipient);
 
         return "";
     }
 
     function liquidateWithOwnLiquidity(
         ERC20PermitParams calldata debtPermitParams,
-        LiquidateWithOwnLiquidityParams calldata params
+        uint256 positionId,
+        uint256 maxRepayAmount,
+        address recipient
     ) external payable {
         if (msg.value > 0) {
             _weth.deposit{value: msg.value}();
         }
-        LoanPosition memory position = _loanPositionManager.getPosition(params.positionId);
+        LoanPosition memory position = _loanPositionManager.getPosition(positionId);
         debtPermitParams.tryPermit(ISubstitute(position.debtToken).underlyingToken(), msg.sender, address(this));
 
-        bytes memory lockData = abi.encode(msg.sender, params);
+        bytes memory lockData = abi.encode(msg.sender, positionId, maxRepayAmount, recipient);
         _loanPositionManager.lock(abi.encode(LiquidationType.WithOwnLiquidity, lockData));
     }
 
-    function _liquidateWithOwnLiquidity(address payer, LiquidateWithOwnLiquidityParams memory params)
+    function _liquidateWithOwnLiquidity(address payer, uint256 positionId, uint256 maxRepayAmount, address recipient)
         internal
         returns (bytes memory)
     {
-        LoanPosition memory position = _loanPositionManager.getPosition(params.positionId);
+        LoanPosition memory position = _loanPositionManager.getPosition(positionId);
         (uint256 liquidationAmount, uint256 repayAmount, uint256 protocolFeeAmount) =
-            _loanPositionManager.liquidate(params.positionId, params.maxRepayAmount);
+            _loanPositionManager.liquidate(positionId, maxRepayAmount);
 
         ISubstitute(position.debtToken).ensureThisBalance(payer, repayAmount);
 
@@ -111,7 +120,7 @@ contract CouponLiquidator is ICouponLiquidator, IPositionLocker {
         uint256 collateralAmount = liquidationAmount - protocolFeeAmount;
 
         _loanPositionManager.withdrawToken(position.collateralToken, address(this), collateralAmount);
-        _burnAllSubstitute(position.collateralToken, params.recipient);
+        _burnAllSubstitute(position.collateralToken, recipient);
 
         return "";
     }

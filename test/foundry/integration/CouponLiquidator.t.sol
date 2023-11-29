@@ -247,14 +247,7 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             )
         );
 
-        ICouponLiquidator.LiquidateWithRouterParams memory params = ICouponLiquidator.LiquidateWithRouterParams({
-            positionId: positionId,
-            swapAmount: usdc.amount(500),
-            swapData: data,
-            recipient: recipient
-        });
-
-        couponLiquidator.liquidateWithRouter(params);
+        couponLiquidator.liquidateWithRouter(positionId, usdc.amount(500), data, recipient);
 
         assertEq(usdc.balanceOf(recipient) - beforeUSDCBalance, 3344321, "USDC_BALANCE");
         assertEq(weth.balanceOf(recipient) - beforeWETHBalance, 3348150879705280, "WETH_BALANCE");
@@ -288,14 +281,8 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         weth.approve(address(couponLiquidator), type(uint256).max);
         (uint256 liquidationAmount, uint256 repayAmount, uint256 protocolFee) =
             loanPositionManager.getLiquidationStatus(positionId, type(uint256).max);
-        ICouponLiquidator.LiquidateWithOwnLiquidityParams memory params = ICouponLiquidator
-            .LiquidateWithOwnLiquidityParams({
-            positionId: positionId,
-            maxRepayAmount: type(uint256).max,
-            recipient: recipient
-        });
 
-        couponLiquidator.liquidateWithOwnLiquidity(emptyPermitParams, params);
+        couponLiquidator.liquidateWithOwnLiquidity(emptyPermitParams, positionId, type(uint256).max, recipient);
 
         assertEq(usdc.balanceOf(recipient), beforeUSDCBalance + liquidationAmount - protocolFee, "USDC_BALANCE");
         assertEq(weth.balanceOf(recipient) + repayAmount, beforeWETHBalance, "WETH_BALANCE");
@@ -330,14 +317,10 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         weth.approve(address(couponLiquidator), type(uint256).max);
         (uint256 liquidationAmount, uint256 repayAmount, uint256 protocolFee) =
             loanPositionManager.getLiquidationStatus(positionId, type(uint256).max);
-        ICouponLiquidator.LiquidateWithOwnLiquidityParams memory params = ICouponLiquidator
-            .LiquidateWithOwnLiquidityParams({
-            positionId: positionId,
-            maxRepayAmount: type(uint256).max,
-            recipient: recipient
-        });
 
-        couponLiquidator.liquidateWithOwnLiquidity{value: 0.1 ether}(emptyPermitParams, params);
+        couponLiquidator.liquidateWithOwnLiquidity{value: 0.1 ether}(
+            emptyPermitParams, positionId, type(uint256).max, recipient
+        );
 
         assertEq(usdc.balanceOf(recipient), beforeUSDCBalance + liquidationAmount - protocolFee, "USDC_BALANCE");
         assertEq(weth.balanceOf(recipient) + repayAmount - 0.1 ether, beforeWETHBalance, "WETH_BALANCE");
@@ -372,10 +355,10 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         weth.approve(address(couponLiquidator), type(uint256).max);
         (uint256 liquidationAmount, uint256 repayAmount, uint256 protocolFee) =
             loanPositionManager.getLiquidationStatus(positionId, 0.2 ether);
-        ICouponLiquidator.LiquidateWithOwnLiquidityParams memory params = ICouponLiquidator
-            .LiquidateWithOwnLiquidityParams({positionId: positionId, maxRepayAmount: 0.2 ether, recipient: recipient});
 
-        couponLiquidator.liquidateWithOwnLiquidity{value: 0.05 ether}(emptyPermitParams, params);
+        couponLiquidator.liquidateWithOwnLiquidity{value: 0.05 ether}(
+            emptyPermitParams, positionId, 0.2 ether, recipient
+        );
 
         assertEq(repayAmount, 0.2 ether, "REPAY_AMOUNT");
         assertEq(usdc.balanceOf(recipient), beforeUSDCBalance + liquidationAmount - protocolFee, "USDC_BALANCE");
