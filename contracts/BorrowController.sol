@@ -55,10 +55,9 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         }
         LoanPosition memory position = _loanPositionManager.getPosition(positionId);
 
-        uint256 maxPayInterest;
-        uint256 minEarnInterest;
-        (position.collateralAmount, position.debtAmount, position.expiredWith, maxPayInterest, minEarnInterest) =
-            abi.decode(data, (uint256, uint256, Epoch, uint256, uint256));
+        int256 interestThreshold;
+        (position.collateralAmount, position.debtAmount, position.expiredWith, interestThreshold) =
+            abi.decode(data, (uint256, uint256, Epoch, int256));
 
         (Coupon[] memory couponsToMint, Coupon[] memory couponsToBurn, int256 collateralDelta, int256 debtDelta) =
         _loanPositionManager.adjustPosition(
@@ -85,8 +84,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
             couponsToMint,
             couponsToBurn,
             debtDelta < 0 ? uint256(-debtDelta) : 0,
-            maxPayInterest,
-            minEarnInterest
+            interestThreshold
         );
 
         if (collateralDelta > 0) {
@@ -111,14 +109,14 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         address debtToken,
         uint256 collateralAmount,
         uint256 debtAmount,
-        uint256 maxPayInterest,
+        int256 maxPayInterest,
         Epoch expiredWith,
         SwapParams calldata swapParams,
         ERC20PermitParams calldata collateralPermitParams
     ) external payable nonReentrant wrapETH {
         collateralPermitParams.tryPermit(_getUnderlyingToken(collateralToken), msg.sender, address(this));
 
-        bytes memory lockData = abi.encode(collateralAmount, debtAmount, expiredWith, maxPayInterest, 0);
+        bytes memory lockData = abi.encode(collateralAmount, debtAmount, expiredWith, maxPayInterest);
         lockData = abi.encode(0, msg.sender, swapParams, abi.encode(collateralToken, debtToken, lockData));
         bytes memory result = _loanPositionManager.lock(lockData);
         uint256 positionId = abi.decode(result, (uint256));
@@ -148,15 +146,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         position.debtAmount = debtAmount;
         position.expiredWith = expiredWith;
 
-        _loanPositionManager.lock(
-            _encodeAdjustData(
-                positionId,
-                position,
-                interestThreshold > 0 ? uint256(interestThreshold) : 0,
-                interestThreshold < 0 ? uint256(-interestThreshold) : 0,
-                swapParams
-            )
-        );
+        _loanPositionManager.lock(_encodeAdjustData(positionId, position, interestThreshold, swapParams));
 
         _burnAllSubstitute(position.collateralToken, msg.sender);
         _burnAllSubstitute(position.debtToken, msg.sender);
@@ -185,11 +175,10 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
     function _encodeAdjustData(
         uint256 id,
         LoanPosition memory p,
-        uint256 maxPay,
-        uint256 minEarn,
+        int256 interestThreshold,
         SwapParams memory swapParams
     ) internal view returns (bytes memory) {
-        bytes memory data = abi.encode(p.collateralAmount, p.debtAmount, p.expiredWith, maxPay, minEarn);
+        bytes memory data = abi.encode(p.collateralAmount, p.debtAmount, p.expiredWith, interestThreshold);
         return abi.encode(id, msg.sender, swapParams, data);
     }
 }

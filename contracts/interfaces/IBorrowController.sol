@@ -21,7 +21,7 @@ interface IBorrowController is IController {
         address debtToken,
         uint256 collateralAmount,
         uint256 debtAmount,
-        uint256 maxPayInterest,
+        int256 maxPayInterest,
         Epoch expiredWith,
         SwapParams calldata swapParams,
         ERC20PermitParams calldata collateralPermitParams

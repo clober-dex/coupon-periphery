@@ -206,7 +206,7 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             borrowToken,
             collateralAmount,
             debtAmount,
-            type(uint256).max,
+            type(int256).max,
             EpochLibrary.current().add(loanEpochs - 1),
             swapParams,
             permitParams

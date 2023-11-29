@@ -195,7 +195,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             borrowToken,
             collateralAmount,
             debtAmount,
-            type(uint256).max,
+            type(int256).max,
             EpochLibrary.current().add(loanEpochs - 1),
             swapParams,
             permitParams
@@ -515,7 +515,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             wausdc,
             collateralAmount,
             debtAmount,
-            type(uint256).max,
+            type(int256).max,
             EpochLibrary.current().add(1),
             swapParams,
             permitParams

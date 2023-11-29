@@ -208,7 +208,7 @@ contract DepositControllerIntegrationTest is Test, CloberMarketSwapCallbackRecei
             vm.signPermit(1, IERC20Permit(Constants.USDC), address(depositController), amount);
         vm.expectRevert(abi.encodeWithSelector(IController.ControllerSlippage.selector));
         vm.prank(user);
-        depositController.deposit(wausdc, amount, 2, amount * 4 / 100, permitParams);
+        depositController.deposit(wausdc, amount, 2, int256(amount * 4 / 100), permitParams);
     }
 
     function testDepositOverCloberMarket() public {
@@ -260,7 +260,7 @@ contract DepositControllerIntegrationTest is Test, CloberMarketSwapCallbackRecei
         depositController.withdraw(
             tokenId,
             amount / 2,
-            type(uint256).max,
+            type(int256).max,
             vm.signPermit(1, bondPositionManager, address(depositController), tokenId)
         );
 
@@ -277,7 +277,7 @@ contract DepositControllerIntegrationTest is Test, CloberMarketSwapCallbackRecei
         beforeBalance = usdc.balanceOf(user);
         beforePosition = afterPosition;
 
-        depositController.withdraw(tokenId, beforePosition.amount, type(uint256).max, emptyERC721PermitParams);
+        depositController.withdraw(tokenId, beforePosition.amount, type(int256).max, emptyERC721PermitParams);
 
         afterPosition = bondPositionManager.getPosition(tokenId);
 
@@ -308,7 +308,7 @@ contract DepositControllerIntegrationTest is Test, CloberMarketSwapCallbackRecei
         depositController.withdraw(
             tokenId,
             amount - 1,
-            type(uint256).max,
+            type(int256).max,
             vm.signPermit(1, bondPositionManager, address(depositController), tokenId)
         );
 
@@ -336,7 +336,7 @@ contract DepositControllerIntegrationTest is Test, CloberMarketSwapCallbackRecei
         depositController.withdraw(
             tokenId,
             amount / 2,
-            type(uint256).max,
+            type(int256).max,
             vm.signPermit(1, bondPositionManager, address(depositController), tokenId)
         );
 
@@ -353,7 +353,7 @@ contract DepositControllerIntegrationTest is Test, CloberMarketSwapCallbackRecei
         beforeBalance = user.balance;
         beforePosition = afterPosition;
 
-        depositController.withdraw(tokenId, beforePosition.amount, type(uint256).max, emptyERC721PermitParams);
+        depositController.withdraw(tokenId, beforePosition.amount, type(int256).max, emptyERC721PermitParams);
 
         afterPosition = bondPositionManager.getPosition(tokenId);
 
