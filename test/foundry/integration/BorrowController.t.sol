@@ -178,7 +178,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         address collateralToken,
         address borrowToken,
         uint256 collateralAmount,
-        uint256 borrowAmount,
+        uint256 debtAmount,
         uint16 loanEpochs
     ) internal returns (uint256 positionId) {
         positionId = loanPositionManager.nextId();
@@ -194,8 +194,8 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             collateralToken,
             borrowToken,
             collateralAmount,
-            borrowAmount,
-            type(uint256).max,
+            debtAmount,
+            type(int256).max,
             EpochLibrary.current().add(loanEpochs - 1),
             swapParams,
             permitParams
@@ -204,23 +204,23 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
 
     function testBorrow() public {
         uint256 collateralAmount = usdc.amount(10000);
-        uint256 borrowAmount = 1 ether;
+        uint256 debtAmount = 1 ether;
 
         uint256 beforeUSDCBalance = usdc.balanceOf(user);
         uint256 beforeETHBalance = user.balance;
 
-        uint256 positionId = _initialBorrow(user, wausdc, waweth, collateralAmount, borrowAmount, 2);
+        uint256 positionId = _initialBorrow(user, wausdc, waweth, collateralAmount, debtAmount, 2);
         LoanPosition memory loanPosition = loanPositionManager.getPosition(positionId);
 
         uint256 couponAmount = 0.08 ether;
 
         assertEq(loanPositionManager.ownerOf(positionId), user, "POSITION_OWNER");
         assertEq(usdc.balanceOf(user), beforeUSDCBalance - collateralAmount, "USDC_BALANCE");
-        assertGe(user.balance, beforeETHBalance + borrowAmount - couponAmount, "NATIVE_BALANCE_GE");
-        assertLe(user.balance, beforeETHBalance + borrowAmount - couponAmount + 0.001 ether, "NATIVE_BALANCE_LE");
+        assertGe(user.balance, beforeETHBalance + debtAmount - couponAmount, "NATIVE_BALANCE_GE");
+        assertLe(user.balance, beforeETHBalance + debtAmount - couponAmount + 0.001 ether, "NATIVE_BALANCE_LE");
         assertEq(loanPosition.expiredWith, EpochLibrary.current().add(1), "POSITION_EXPIRE_EPOCH");
         assertEq(loanPosition.collateralAmount, collateralAmount, "POSITION_COLLATERAL_AMOUNT");
-        assertEq(loanPosition.debtAmount, borrowAmount, "POSITION_DEBT_AMOUNT");
+        assertEq(loanPosition.debtAmount, debtAmount, "POSITION_DEBT_AMOUNT");
         assertEq(loanPosition.collateralToken, wausdc, "POSITION_COLLATERAL_TOKEN");
         assertEq(loanPosition.debtToken, waweth, "POSITION_DEBT_TOKEN");
     }
@@ -239,8 +239,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             positionId,
             beforeLoanPosition.collateralAmount,
             beforeLoanPosition.debtAmount + 0.5 ether,
-            type(uint256).max,
-            0,
+            type(int256).max,
             beforeLoanPosition.expiredWith,
             swapParams,
             permit721Params,
@@ -280,7 +279,6 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             positionId,
             beforeLoanPosition.collateralAmount + collateralAmount,
             beforeLoanPosition.debtAmount,
-            type(uint256).max,
             0,
             beforeLoanPosition.expiredWith,
             swapParams,
@@ -319,7 +317,6 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             positionId,
             beforeLoanPosition.collateralAmount - collateralAmount,
             beforeLoanPosition.debtAmount,
-            type(uint256).max,
             0,
             beforeLoanPosition.expiredWith,
             swapParams,
@@ -360,8 +357,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             positionId,
             beforeLoanPosition.collateralAmount,
             beforeLoanPosition.debtAmount,
-            maxPayInterest,
-            0,
+            int256(maxPayInterest),
             beforeLoanPosition.expiredWith.add(epochs),
             swapParams,
             permit721Params,
@@ -398,7 +394,6 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             positionId,
             beforeLoanPosition.collateralAmount,
             beforeLoanPosition.debtAmount,
-            type(uint256).max,
             0,
             beforeLoanPosition.expiredWith.sub(epochs),
             swapParams,
@@ -437,7 +432,6 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             positionId,
             beforeLoanPosition.collateralAmount,
             beforeLoanPosition.debtAmount - repayAmount,
-            type(uint256).max,
             0,
             beforeLoanPosition.expiredWith,
             swapParams,
@@ -476,7 +470,6 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             positionId,
             beforeLoanPosition.collateralAmount,
             beforeLoanPosition.debtAmount - repayAmount,
-            type(uint256).max,
             0,
             beforeLoanPosition.expiredWith,
             swapParams,
@@ -491,7 +484,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
 
     function testLeverage() public {
         uint256 collateralAmount = 0.4 ether;
-        uint256 borrowAmount = usdc.amount(550);
+        uint256 debtAmount = usdc.amount(550);
 
         uint256 beforeUSDCBalance = usdc.balanceOf(user);
         uint256 beforeWETHBalance = weth.balanceOf(user);
@@ -514,15 +507,15 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             )
         );
         swapParams.amount = usdc.amount(500);
-        swapParams.inToken = address(wausdc);
+        swapParams.inSubstitute = address(wausdc);
 
         vm.prank(user);
         borrowController.borrow{value: 0.16 ether}(
             waweth,
             wausdc,
             collateralAmount,
-            borrowAmount,
-            type(uint256).max,
+            debtAmount,
+            type(int256).max,
             EpochLibrary.current().add(1),
             swapParams,
             permitParams
@@ -536,7 +529,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         assertEq(beforeWETHBalance, weth.balanceOf(user), "WETH_BALANCE");
         assertEq(loanPosition.expiredWith, EpochLibrary.current().add(1), "POSITION_EXPIRE_EPOCH");
         assertEq(loanPosition.collateralAmount, collateralAmount, "POSITION_COLLATERAL_AMOUNT");
-        assertEq(loanPosition.debtAmount, borrowAmount, "POSITION_DEBT_AMOUNT");
+        assertEq(loanPosition.debtAmount, debtAmount, "POSITION_DEBT_AMOUNT");
         assertEq(loanPosition.collateralToken, waweth, "POSITION_COLLATERAL_TOKEN");
         assertEq(loanPosition.debtToken, wausdc, "POSITION_DEBT_TOKEN");
     }
@@ -554,7 +547,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         uint256 beforePositionDebtAmount = loanPosition.debtAmount;
 
         uint256 collateralAmount = 0.4 ether;
-        uint256 borrowAmount = usdc.amount(550);
+        uint256 debtAmount = usdc.amount(550);
 
         ERC20PermitParams memory permitParams = vm.signPermit(
             1,
@@ -575,15 +568,14 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             )
         );
         swapParams.amount = usdc.amount(500);
-        swapParams.inToken = address(wausdc);
+        swapParams.inSubstitute = address(wausdc);
 
         vm.prank(user);
         borrowController.adjustPosition{value: 0.16 ether}(
             positionId,
             loanPosition.collateralAmount + collateralAmount,
-            loanPosition.debtAmount + borrowAmount,
-            type(uint256).max,
-            0,
+            loanPosition.debtAmount + debtAmount,
+            type(int256).max,
             loanPosition.expiredWith,
             swapParams,
             permit721Params,
@@ -603,7 +595,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             collateralAmount + beforePositionCollateralAmount,
             "POSITION_COLLATERAL_AMOUNT"
         );
-        assertEq(loanPosition.debtAmount, borrowAmount + beforePositionDebtAmount, "POSITION_DEBT_AMOUNT");
+        assertEq(loanPosition.debtAmount, debtAmount + beforePositionDebtAmount, "POSITION_DEBT_AMOUNT");
         assertEq(loanPosition.collateralToken, waweth, "POSITION_COLLATERAL_TOKEN");
         assertEq(loanPosition.debtToken, wausdc, "POSITION_DEBT_TOKEN");
     }
@@ -626,7 +618,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             )
         );
         swapParams.amount = usdc.amount(500);
-        swapParams.inToken = address(wausdc);
+        swapParams.inSubstitute = address(wausdc);
 
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
@@ -636,7 +628,6 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             positionId,
             beforeLoanPosition.collateralAmount - collateralAmount,
             debtAmount,
-            type(uint256).max,
             0,
             beforeLoanPosition.expiredWith,
             swapParams,
@@ -678,7 +669,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             )
         );
         swapParams.amount = usdc.amount(500);
-        swapParams.inToken = address(wausdc);
+        swapParams.inSubstitute = address(wausdc);
 
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
@@ -688,7 +679,6 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             positionId,
             beforeLoanPosition.collateralAmount - collateralAmount,
             0,
-            type(uint256).max,
             0,
             beforeLoanPosition.expiredWith,
             swapParams,
@@ -730,7 +720,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             )
         );
         swapParams.amount = usdc.amount(500);
-        swapParams.inToken = address(wausdc);
+        swapParams.inSubstitute = address(wausdc);
 
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
@@ -740,7 +730,6 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             positionId,
             beforeLoanPosition.collateralAmount - collateralAmount,
             maxDebtAmount,
-            type(uint256).max,
             0,
             beforeLoanPosition.expiredWith,
             swapParams,
@@ -780,8 +769,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             positionId,
             beforeLoanPosition.collateralAmount,
             beforeLoanPosition.debtAmount + 0.5 ether,
-            type(uint256).max,
-            0,
+            type(int256).max,
             beforeLoanPosition.expiredWith,
             swapParams,
             permit721Params,
@@ -806,7 +794,6 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             positionId,
             beforeLoanPosition.collateralAmount - collateralAmount,
             beforeLoanPosition.debtAmount,
-            type(uint256).max,
             0,
             beforeLoanPosition.expiredWith,
             swapParams,
@@ -830,8 +817,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             positionId,
             beforeLoanPosition.collateralAmount - collateralAmount,
             beforeLoanPosition.debtAmount,
-            type(uint256).max,
-            0,
+            type(int256).max,
             beforeLoanPosition.expiredWith,
             swapParams,
             permit721Params,
