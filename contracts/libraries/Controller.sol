@@ -9,6 +9,7 @@ import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC2
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import {CloberMarketSwapCallbackReceiver} from "../external/clober/CloberMarketSwapCallbackReceiver.sol";
 import {CloberMarketFactory} from "../external/clober/CloberMarketFactory.sol";
@@ -33,6 +34,7 @@ abstract contract Controller is
     Ownable2Step,
     ReentrancyGuard
 {
+    using SafeCast for uint256;
     using SafeERC20 for IERC20;
     using CouponKeyLibrary for CouponKey;
     using CouponLibrary for Coupon;
@@ -64,17 +66,15 @@ abstract contract Controller is
         Coupon[] memory couponsToMint,
         Coupon[] memory couponsToBurn,
         uint256 amountToPay,
-        uint256 maxPayInterest,
-        uint256 leftRequiredInterest
+        int256 remainingInterest
     ) internal {
         if (couponsToBurn.length > 0) {
             Coupon memory lastCoupon = couponsToBurn[couponsToBurn.length - 1];
             assembly {
                 mstore(couponsToBurn, sub(mload(couponsToBurn), 1))
             }
-            bytes memory data = abi.encode(
-                user, lastCoupon, couponsToMint, couponsToBurn, amountToPay, maxPayInterest, leftRequiredInterest
-            );
+            bytes memory data =
+                abi.encode(user, lastCoupon, couponsToMint, couponsToBurn, amountToPay, remainingInterest);
             assembly {
                 mstore(couponsToBurn, add(mload(couponsToBurn), 1))
             }
@@ -87,9 +87,8 @@ abstract contract Controller is
             assembly {
                 mstore(couponsToMint, sub(mload(couponsToMint), 1))
             }
-            bytes memory data = abi.encode(
-                user, lastCoupon, couponsToMint, couponsToBurn, amountToPay, maxPayInterest, leftRequiredInterest
-            );
+            bytes memory data =
+                abi.encode(user, lastCoupon, couponsToMint, couponsToBurn, amountToPay, remainingInterest);
             assembly {
                 mstore(couponsToMint, add(mload(couponsToMint), 1))
             }
@@ -97,7 +96,7 @@ abstract contract Controller is
             CloberOrderBook market = CloberOrderBook(_couponMarkets[lastCoupon.id()]);
             market.marketOrder(address(this), 0, 0, lastCoupon.amount, 2, data);
         } else {
-            if (leftRequiredInterest > 0) revert ControllerSlippage();
+            if (remainingInterest < 0) revert ControllerSlippage();
             _ensureBalance(token, user, amountToPay);
         }
     }
@@ -115,31 +114,21 @@ abstract contract Controller is
         address asset = CloberOrderBook(msg.sender).quoteToken();
         address user;
         Coupon memory lastCoupon;
-        unchecked {
-            Coupon[] memory couponsToMint;
-            Coupon[] memory couponsToBurn;
-            uint256 amountToPay;
-            uint256 maxPayInterest;
-            uint256 leftRequiredInterest;
-            (user, lastCoupon, couponsToMint, couponsToBurn, amountToPay, maxPayInterest, leftRequiredInterest) =
-                abi.decode(data, (address, Coupon, Coupon[], Coupon[], uint256, uint256, uint256));
+        Coupon[] memory couponsToMint;
+        Coupon[] memory couponsToBurn;
+        uint256 amountToPay;
+        int256 remainingInterest;
+        (user, lastCoupon, couponsToMint, couponsToBurn, amountToPay, remainingInterest) =
+            abi.decode(data, (address, Coupon, Coupon[], Coupon[], uint256, int256));
 
-            if (asset == inputToken) {
-                if (maxPayInterest < inputAmount) revert ControllerSlippage();
-                maxPayInterest -= inputAmount;
-                amountToPay += inputAmount;
-            } else {
-                if (leftRequiredInterest > outputAmount) {
-                    leftRequiredInterest -= outputAmount;
-                } else {
-                    leftRequiredInterest = 0;
-                }
-            }
-
-            _executeCouponTrade(
-                user, asset, couponsToMint, couponsToBurn, amountToPay, maxPayInterest, leftRequiredInterest
-            );
+        if (asset == inputToken) {
+            remainingInterest -= inputAmount.toInt256();
+            amountToPay += inputAmount;
+        } else {
+            remainingInterest += outputAmount.toInt256();
         }
+
+        _executeCouponTrade(user, asset, couponsToMint, couponsToBurn, amountToPay, remainingInterest);
 
         // transfer input tokens
         if (inputAmount > 0) IERC20(inputToken).safeTransfer(msg.sender, inputAmount);
