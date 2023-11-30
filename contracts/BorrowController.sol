@@ -8,6 +8,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IBorrowController} from "./interfaces/IBorrowController.sol";
 import {ILoanPositionManager} from "./interfaces/ILoanPositionManager.sol";
 import {ISubstitute} from "./interfaces/ISubstitute.sol";
+import {SubstituteLibrary} from "./libraries/Substitute.sol";
 import {IPositionLocker} from "./interfaces/IPositionLocker.sol";
 import {LoanPosition} from "./libraries/LoanPosition.sol";
 import {Coupon} from "./libraries/Coupon.sol";
@@ -18,6 +19,7 @@ import {ERC20PermitParams, PermitSignature, PermitParamsLibrary} from "./librari
 contract BorrowController is IBorrowController, Controller, IPositionLocker {
     using PermitParamsLibrary for *;
     using EpochLibrary for Epoch;
+    using SubstituteLibrary for ISubstitute;
 
     ILoanPositionManager private immutable _loanPositionManager;
     address private immutable _router;
@@ -88,7 +90,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         );
 
         if (collateralDelta > 0) {
-            _ensureBalance(position.collateralToken, user, uint256(collateralDelta));
+            ISubstitute(position.collateralToken).ensureBalance(user, uint256(collateralDelta));
             IERC20(position.collateralToken).approve(address(_loanPositionManager), uint256(collateralDelta));
             _loanPositionManager.depositToken(position.collateralToken, uint256(collateralDelta));
         }
@@ -113,7 +115,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         Epoch expiredWith,
         SwapParams calldata swapParams,
         ERC20PermitParams calldata collateralPermitParams
-    ) external payable nonReentrant wrapETH returns (uint256 positionId) {
+    ) external payable nonReentrant wrapAndRefundETH returns (uint256 positionId) {
         collateralPermitParams.tryPermit(_getUnderlyingToken(collateralToken), msg.sender, address(this));
 
         bytes memory lockData = abi.encode(collateralAmount, debtAmount, expiredWith, maxPayInterest);
@@ -121,8 +123,8 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         bytes memory result = _loanPositionManager.lock(lockData);
         positionId = abi.decode(result, (uint256));
 
-        _burnAllSubstitute(collateralToken, msg.sender);
-        _burnAllSubstitute(debtToken, msg.sender);
+        ISubstitute(collateralToken).burnAll(msg.sender);
+        ISubstitute(debtToken).burnAll(msg.sender);
         _loanPositionManager.transferFrom(address(this), msg.sender, positionId);
     }
 
@@ -136,7 +138,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         PermitSignature calldata positionPermitParams,
         ERC20PermitParams calldata collateralPermitParams,
         ERC20PermitParams calldata debtPermitParams
-    ) external payable nonReentrant wrapETH onlyPositionOwner(positionId) {
+    ) external payable nonReentrant wrapAndRefundETH onlyPositionOwner(positionId) {
         positionPermitParams.tryPermit(_loanPositionManager, positionId, address(this));
         LoanPosition memory position = _loanPositionManager.getPosition(positionId);
         collateralPermitParams.tryPermit(_getUnderlyingToken(position.collateralToken), msg.sender, address(this));
@@ -148,8 +150,8 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
 
         _loanPositionManager.lock(_encodeAdjustData(positionId, position, interestThreshold, swapParams));
 
-        _burnAllSubstitute(position.collateralToken, msg.sender);
-        _burnAllSubstitute(position.debtToken, msg.sender);
+        ISubstitute(position.collateralToken).burnAll(msg.sender);
+        ISubstitute(position.debtToken).burnAll(msg.sender);
     }
 
     function _swap(address inSubstitute, address outSubstitute, uint256 inAmount, bytes memory swapParams)

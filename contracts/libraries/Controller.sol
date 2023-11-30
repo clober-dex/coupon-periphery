@@ -24,6 +24,7 @@ import {IERC721Permit} from "../interfaces/IERC721Permit.sol";
 import {ISubstitute} from "../interfaces/ISubstitute.sol";
 import {IController} from "../interfaces/IController.sol";
 import {ReentrancyGuard} from "./ReentrancyGuard.sol";
+import {SubstituteLibrary} from "./Substitute.sol";
 
 import {Epoch} from "./Epoch.sol";
 
@@ -38,6 +39,7 @@ abstract contract Controller is
     using SafeERC20 for IERC20;
     using CouponKeyLibrary for CouponKey;
     using CouponLibrary for Coupon;
+    using SubstituteLibrary for ISubstitute;
 
     IWrapped1155Factory internal immutable _wrapped1155Factory;
     CloberMarketFactory internal immutable _cloberMarketFactory;
@@ -55,9 +57,18 @@ abstract contract Controller is
         _weth = IWETH9(weth);
     }
 
-    modifier wrapETH() {
-        if (address(this).balance > 0) _weth.deposit{value: address(this).balance}();
+    modifier wrapAndRefundETH() {
+        bool hasMsgValue = address(this).balance > 0;
+        if (hasMsgValue) _weth.deposit{value: address(this).balance}();
         _;
+        if (hasMsgValue) {
+            uint256 leftBalance = _weth.balanceOf(address(this));
+            if (leftBalance > 0) {
+                _weth.withdraw(leftBalance);
+                (bool success,) = msg.sender.call{value: leftBalance}("");
+                require(success);
+            }
+        }
     }
 
     function _executeCouponTrade(
@@ -97,7 +108,7 @@ abstract contract Controller is
             market.marketOrder(address(this), 0, 0, lastCoupon.amount, 2, data);
         } else {
             if (remainingInterest < 0) revert ControllerSlippage();
-            _ensureBalance(token, user, amountToPay);
+            ISubstitute(token).ensureBalance(user, amountToPay);
         }
     }
 
@@ -141,29 +152,6 @@ abstract contract Controller is
 
     function _getUnderlyingToken(address substitute) internal view returns (address) {
         return ISubstitute(substitute).underlyingToken();
-    }
-
-    function _burnAllSubstitute(address substitute, address to) internal {
-        uint256 leftAmount = IERC20(substitute).balanceOf(address(this));
-        if (leftAmount == 0) return;
-        ISubstitute(substitute).burn(leftAmount, to);
-    }
-
-    function _ensureBalance(address token, address user, uint256 amount) internal {
-        // TODO: consider to use SubstituteLibrary
-        address underlyingToken = ISubstitute(token).underlyingToken();
-        uint256 thisBalance = IERC20(token).balanceOf(address(this));
-        uint256 underlyingBalance = IERC20(underlyingToken).balanceOf(address(this));
-        if (amount > thisBalance + underlyingBalance) {
-            unchecked {
-                IERC20(underlyingToken).safeTransferFrom(user, address(this), amount - thisBalance - underlyingBalance);
-                underlyingBalance = amount - thisBalance;
-            }
-        }
-        if (underlyingBalance > 0) {
-            IERC20(underlyingToken).approve(token, underlyingBalance);
-            ISubstitute(token).mint(underlyingBalance, address(this));
-        }
     }
 
     function _wrapCoupons(Coupon[] memory coupons) internal {

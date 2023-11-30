@@ -25,7 +25,7 @@ contract SubstituteLibraryUnitTest is Test {
         IERC20(weth).approve(address(waweth), type(uint256).max);
     }
 
-    function testEnsureThisBalance() public {
+    function testEnsureBalance() public {
         _testEnsureThisBalance(
             Input({substitute: 1 ether, underlying: 1 ether, ensure: 0 ether}),
             Expected({thisSubstitute: 0, thisUnderlying: 0, wrapperSubstitute: 0, wrapperUnderlying: 0})
@@ -98,6 +98,6 @@ contract SubstituteLibraryUnitTest is Test {
 
 contract SubstituteLibraryWrapper {
     function ensureThisBalance(address substitute, address payer, uint256 amount) external {
-        SubstituteLibrary.ensureThisBalance(ISubstitute(substitute), payer, amount);
+        SubstituteLibrary.ensureBalance(ISubstitute(substitute), payer, amount);
     }
 }
