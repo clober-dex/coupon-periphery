@@ -25,7 +25,7 @@ interface IBorrowController is IController {
         Epoch expiredWith,
         SwapParams calldata swapParams,
         ERC20PermitParams calldata collateralPermitParams
-    ) external payable;
+    ) external payable returns (uint256 positionId);
 
     function adjust(
         uint256 positionId,

@@ -87,15 +87,15 @@ contract DepositController is IDepositController, Controller, IPositionLocker {
         uint16 lockEpochs,
         int256 minEarnInterest,
         ERC20PermitParams calldata tokenPermitParams
-    ) external payable nonReentrant wrapETH {
+    ) external payable nonReentrant wrapETH returns (uint256 positionId) {
         tokenPermitParams.tryPermit(_getUnderlyingToken(asset), msg.sender, address(this));
         bytes memory lockData = abi.encode(amount, EpochLibrary.current().add(lockEpochs - 1), -minEarnInterest);
         bytes memory result = _bondPositionManager.lock(abi.encode(0, msg.sender, abi.encode(asset, lockData)));
-        uint256 id = abi.decode(result, (uint256));
+        positionId = abi.decode(result, (uint256));
 
         _burnAllSubstitute(asset, msg.sender);
 
-        _bondPositionManager.transferFrom(address(this), msg.sender, id);
+        _bondPositionManager.transferFrom(address(this), msg.sender, positionId);
     }
 
     function withdraw(

@@ -14,7 +14,7 @@ interface IDepositController is IController {
         uint16 lockEpochs,
         int256 minEarnInterest,
         ERC20PermitParams calldata tokenPermitParams
-    ) external payable;
+    ) external payable returns (uint256 positionId);
 
     function withdraw(
         uint256 positionId,
