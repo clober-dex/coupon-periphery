@@ -84,12 +84,12 @@ contract DepositController is IDepositController, Controller, IPositionLocker {
     function deposit(
         address asset,
         uint256 amount,
-        uint16 lockEpochs,
-        int256 minEarnInterest,
+        Epoch expiredWith,
+        int256 maxPayInterest,
         ERC20PermitParams calldata tokenPermitParams
     ) external payable nonReentrant wrapETH returns (uint256 positionId) {
         tokenPermitParams.tryPermit(_getUnderlyingToken(asset), msg.sender, address(this));
-        bytes memory lockData = abi.encode(amount, EpochLibrary.current().add(lockEpochs - 1), -minEarnInterest);
+        bytes memory lockData = abi.encode(amount, expiredWith, maxPayInterest);
         bytes memory result = _bondPositionManager.lock(abi.encode(0, msg.sender, abi.encode(asset, lockData)));
         positionId = abi.decode(result, (uint256));
 
@@ -98,31 +98,20 @@ contract DepositController is IDepositController, Controller, IPositionLocker {
         _bondPositionManager.transferFrom(address(this), msg.sender, positionId);
     }
 
-    function withdraw(
+    function adjust(
         uint256 positionId,
-        uint256 withdrawAmount,
+        uint256 amount,
+        Epoch expiredWith,
         int256 maxPayInterest,
+        ERC20PermitParams calldata tokenPermitParams,
         PermitSignature calldata positionPermitParams
-    ) external nonReentrant onlyPositionOwner(positionId) {
+    ) external payable nonReentrant wrapETH onlyPositionOwner(positionId) {
         positionPermitParams.tryPermit(_bondPositionManager, positionId, address(this));
         BondPosition memory position = _bondPositionManager.getPosition(positionId);
+        tokenPermitParams.tryPermit(position.asset, msg.sender, address(this));
 
-        bytes memory lockData = abi.encode(position.amount - withdrawAmount, position.expiredWith, maxPayInterest);
+        bytes memory lockData = abi.encode(amount, expiredWith, maxPayInterest);
         _bondPositionManager.lock(abi.encode(positionId, msg.sender, lockData));
-
-        _burnAllSubstitute(position.asset, msg.sender);
-    }
-
-    function collect(uint256 positionId, PermitSignature calldata positionPermitParams)
-        external
-        nonReentrant
-        onlyPositionOwner(positionId)
-    {
-        positionPermitParams.tryPermit(_bondPositionManager, positionId, address(this));
-        BondPosition memory position = _bondPositionManager.getPosition(positionId);
-        if (position.expiredWith >= EpochLibrary.current()) revert NotExpired();
-
-        _bondPositionManager.lock(abi.encode(positionId, msg.sender, abi.encode(0, position.expiredWith, 0, 0)));
 
         _burnAllSubstitute(position.asset, msg.sender);
     }
