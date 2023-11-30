@@ -27,7 +27,7 @@ interface IBorrowController is IController {
         ERC20PermitParams calldata collateralPermitParams
     ) external payable;
 
-    function adjustPosition(
+    function adjust(
         uint256 positionId,
         uint256 collateralAmount,
         uint256 debtAmount,

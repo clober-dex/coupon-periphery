@@ -126,7 +126,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         _loanPositionManager.transferFrom(address(this), msg.sender, positionId);
     }
 
-    function adjustPosition(
+    function adjust(
         uint256 positionId,
         uint256 collateralAmount,
         uint256 debtAmount,
