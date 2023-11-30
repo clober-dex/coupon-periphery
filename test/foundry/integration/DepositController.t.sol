@@ -208,9 +208,7 @@ contract DepositControllerIntegrationTest is Test, CloberMarketSwapCallbackRecei
             vm.signPermit(1, IERC20Permit(Constants.USDC), address(depositController), amount);
         vm.expectRevert(abi.encodeWithSelector(IController.ControllerSlippage.selector));
         vm.prank(user);
-        depositController.deposit(
-            wausdc, amount, EpochLibrary.current().add(1), -int256(amount * 4 / 100), permitParams
-        );
+        depositController.deposit(wausdc, amount, EpochLibrary.current().add(1), int256(amount * 4 / 100), permitParams);
     }
 
     function testDepositOverCloberMarket() public {

@@ -7,8 +7,6 @@ import {ERC20PermitParams, PermitSignature} from "../libraries/PermitParams.sol"
 import {Epoch} from "../libraries/Epoch.sol";
 
 interface IDepositController is IController {
-    error NotExpired();
-
     function deposit(
         address token,
         uint256 amount,
@@ -21,7 +19,7 @@ interface IDepositController is IController {
         uint256 positionId,
         uint256 amount,
         Epoch expiredWith,
-        int256 minEarnInterest,
+        int256 interestThreshold,
         ERC20PermitParams calldata tokenPermitParams,
         PermitSignature calldata positionPermitParams
     ) external payable;

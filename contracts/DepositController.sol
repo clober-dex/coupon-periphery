@@ -85,11 +85,11 @@ contract DepositController is IDepositController, Controller, IPositionLocker {
         address asset,
         uint256 amount,
         Epoch expiredWith,
-        int256 maxPayInterest,
+        int256 minEarnInterest,
         ERC20PermitParams calldata tokenPermitParams
     ) external payable nonReentrant wrapETH returns (uint256 positionId) {
         tokenPermitParams.tryPermit(_getUnderlyingToken(asset), msg.sender, address(this));
-        bytes memory lockData = abi.encode(amount, expiredWith, maxPayInterest);
+        bytes memory lockData = abi.encode(amount, expiredWith, -minEarnInterest);
         bytes memory result = _bondPositionManager.lock(abi.encode(0, msg.sender, abi.encode(asset, lockData)));
         positionId = abi.decode(result, (uint256));
 
@@ -102,7 +102,7 @@ contract DepositController is IDepositController, Controller, IPositionLocker {
         uint256 positionId,
         uint256 amount,
         Epoch expiredWith,
-        int256 maxPayInterest,
+        int256 interestThreshold,
         ERC20PermitParams calldata tokenPermitParams,
         PermitSignature calldata positionPermitParams
     ) external payable nonReentrant wrapETH onlyPositionOwner(positionId) {
@@ -110,7 +110,7 @@ contract DepositController is IDepositController, Controller, IPositionLocker {
         BondPosition memory position = _bondPositionManager.getPosition(positionId);
         tokenPermitParams.tryPermit(position.asset, msg.sender, address(this));
 
-        bytes memory lockData = abi.encode(amount, expiredWith, maxPayInterest);
+        bytes memory lockData = abi.encode(amount, expiredWith, interestThreshold);
         _bondPositionManager.lock(abi.encode(positionId, msg.sender, lockData));
 
         _burnAllSubstitute(position.asset, msg.sender);

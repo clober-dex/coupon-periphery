@@ -14,7 +14,6 @@ interface IBorrowController is IController {
     }
 
     error CollateralSwapFailed(string reason);
-    error InvalidDebtAmount();
 
     function borrow(
         address collateralToken,
