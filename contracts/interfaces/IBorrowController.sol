@@ -14,7 +14,6 @@ interface IBorrowController is IController {
     }
 
     error CollateralSwapFailed(string reason);
-    error InvalidDebtAmount();
 
     function borrow(
         address collateralToken,
@@ -25,9 +24,9 @@ interface IBorrowController is IController {
         Epoch expiredWith,
         SwapParams calldata swapParams,
         ERC20PermitParams calldata collateralPermitParams
-    ) external payable;
+    ) external payable returns (uint256 positionId);
 
-    function adjustPosition(
+    function adjust(
         uint256 positionId,
         uint256 collateralAmount,
         uint256 debtAmount,

@@ -235,7 +235,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
         IBorrowController.SwapParams memory swapParams;
         vm.prank(user);
-        borrowController.adjustPosition(
+        borrowController.adjust(
             positionId,
             beforeLoanPosition.collateralAmount,
             beforeLoanPosition.debtAmount + 0.5 ether,
@@ -275,7 +275,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         );
         IBorrowController.SwapParams memory swapParams;
         vm.prank(user);
-        borrowController.adjustPosition(
+        borrowController.adjust(
             positionId,
             beforeLoanPosition.collateralAmount + collateralAmount,
             beforeLoanPosition.debtAmount,
@@ -313,7 +313,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
 
         IBorrowController.SwapParams memory swapParams;
         vm.prank(user);
-        borrowController.adjustPosition(
+        borrowController.adjust(
             positionId,
             beforeLoanPosition.collateralAmount - collateralAmount,
             beforeLoanPosition.debtAmount,
@@ -353,7 +353,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         IBorrowController.SwapParams memory swapParams;
         vm.startPrank(user);
         weth.approve(address(borrowController), maxPayInterest);
-        borrowController.adjustPosition{value: maxPayInterest}(
+        borrowController.adjust{value: maxPayInterest}(
             positionId,
             beforeLoanPosition.collateralAmount,
             beforeLoanPosition.debtAmount,
@@ -390,7 +390,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
 
         IBorrowController.SwapParams memory swapParams;
         vm.prank(user);
-        borrowController.adjustPosition(
+        borrowController.adjust(
             positionId,
             beforeLoanPosition.collateralAmount,
             beforeLoanPosition.debtAmount,
@@ -428,7 +428,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
 
         IBorrowController.SwapParams memory swapParams;
         vm.prank(user);
-        borrowController.adjustPosition{value: repayAmount}(
+        borrowController.adjust{value: repayAmount}(
             positionId,
             beforeLoanPosition.collateralAmount,
             beforeLoanPosition.debtAmount - repayAmount,
@@ -466,7 +466,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
 
         IBorrowController.SwapParams memory swapParams;
         vm.prank(user);
-        borrowController.adjustPosition{value: repayAmount}(
+        borrowController.adjust{value: repayAmount}(
             positionId,
             beforeLoanPosition.collateralAmount,
             beforeLoanPosition.debtAmount - repayAmount,
@@ -571,7 +571,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         swapParams.inSubstitute = address(wausdc);
 
         vm.prank(user);
-        borrowController.adjustPosition{value: 0.16 ether}(
+        borrowController.adjust{value: 0.16 ether}(
             positionId,
             loanPosition.collateralAmount + collateralAmount,
             loanPosition.debtAmount + debtAmount,
@@ -624,7 +624,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
 
         vm.prank(user);
-        borrowController.adjustPosition(
+        borrowController.adjust(
             positionId,
             beforeLoanPosition.collateralAmount - collateralAmount,
             debtAmount,
@@ -675,7 +675,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
 
         vm.prank(user);
-        borrowController.adjustPosition(
+        borrowController.adjust(
             positionId,
             beforeLoanPosition.collateralAmount - collateralAmount,
             0,
@@ -726,7 +726,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
 
         vm.prank(user);
-        borrowController.adjustPosition(
+        borrowController.adjust(
             positionId,
             beforeLoanPosition.collateralAmount - collateralAmount,
             maxDebtAmount,
@@ -765,7 +765,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         IBorrowController.SwapParams memory swapParams;
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(ILoanPositionManagerTypes.FullRepaymentRequired.selector));
-        borrowController.adjustPosition(
+        borrowController.adjust(
             positionId,
             beforeLoanPosition.collateralAmount,
             beforeLoanPosition.debtAmount + 0.5 ether,
@@ -790,7 +790,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         IBorrowController.SwapParams memory swapParams;
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(ILoanPositionManagerTypes.FullRepaymentRequired.selector));
-        borrowController.adjustPosition(
+        borrowController.adjust(
             positionId,
             beforeLoanPosition.collateralAmount - collateralAmount,
             beforeLoanPosition.debtAmount,
@@ -813,7 +813,7 @@ contract BorrowControllerIntegrationTest is Test, CloberMarketSwapCallbackReceiv
 
         IBorrowController.SwapParams memory swapParams;
         vm.expectRevert(abi.encodeWithSelector(IController.InvalidAccess.selector));
-        borrowController.adjustPosition(
+        borrowController.adjust(
             positionId,
             beforeLoanPosition.collateralAmount - collateralAmount,
             beforeLoanPosition.debtAmount,

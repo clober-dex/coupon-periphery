@@ -113,20 +113,20 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         Epoch expiredWith,
         SwapParams calldata swapParams,
         ERC20PermitParams calldata collateralPermitParams
-    ) external payable nonReentrant wrapETH {
+    ) external payable nonReentrant wrapETH returns (uint256 positionId) {
         collateralPermitParams.tryPermit(_getUnderlyingToken(collateralToken), msg.sender, address(this));
 
         bytes memory lockData = abi.encode(collateralAmount, debtAmount, expiredWith, maxPayInterest);
         lockData = abi.encode(0, msg.sender, swapParams, abi.encode(collateralToken, debtToken, lockData));
         bytes memory result = _loanPositionManager.lock(lockData);
-        uint256 positionId = abi.decode(result, (uint256));
+        positionId = abi.decode(result, (uint256));
 
         _burnAllSubstitute(collateralToken, msg.sender);
         _burnAllSubstitute(debtToken, msg.sender);
         _loanPositionManager.transferFrom(address(this), msg.sender, positionId);
     }
 
-    function adjustPosition(
+    function adjust(
         uint256 positionId,
         uint256 collateralAmount,
         uint256 debtAmount,
