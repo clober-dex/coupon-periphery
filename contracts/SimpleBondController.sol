@@ -46,9 +46,18 @@ contract SimpleBondController is IPositionLocker, ERC1155Holder, ISimpleBondCont
         _couponManager.setApprovalForAll(address(_couponWrapper), true);
     }
 
-    modifier wrapETH() {
-        if (address(this).balance > 0) _weth.deposit{value: address(this).balance}();
+    modifier wrapAndRefundETH() {
+        bool hasMsgValue = address(this).balance > 0;
+        if (hasMsgValue) _weth.deposit{value: address(this).balance}();
         _;
+        if (hasMsgValue) {
+            uint256 leftBalance = _weth.balanceOf(address(this));
+            if (leftBalance > 0) {
+                _weth.withdraw(leftBalance);
+                (bool success,) = msg.sender.call{value: leftBalance}("");
+                require(success);
+            }
+        }
     }
 
     function positionLockAcquired(bytes calldata data) external returns (bytes memory result) {
@@ -62,7 +71,7 @@ contract SimpleBondController is IPositionLocker, ERC1155Holder, ISimpleBondCont
         (Coupon[] memory couponsToMint, Coupon[] memory couponsToBurn, int256 amountDelta) =
             _bondPositionManager.adjustPosition(tokenId, amount, expiredWith);
         if (amountDelta > 0) {
-            ISubstitute(asset).ensureThisBalance(user, uint256(amountDelta));
+            ISubstitute(asset).ensureBalance(user, uint256(amountDelta));
             IERC20(asset).approve(address(_bondPositionManager), uint256(amountDelta));
             _bondPositionManager.depositToken(address(asset), uint256(amountDelta));
         } else if (amountDelta < 0) {
@@ -108,7 +117,7 @@ contract SimpleBondController is IPositionLocker, ERC1155Holder, ISimpleBondCont
         uint256 amount,
         Epoch expiredWith,
         bool wrapCoupons
-    ) internal wrapETH returns (uint256 positionId) {
+    ) internal wrapAndRefundETH returns (uint256 positionId) {
         address underlyingToken = ISubstitute(asset).underlyingToken();
         permitParams.tryPermit(underlyingToken, msg.sender, address(this));
         bytes memory result =
@@ -147,7 +156,7 @@ contract SimpleBondController is IPositionLocker, ERC1155Holder, ISimpleBondCont
         uint256 amount,
         Epoch expiredWith,
         bool wrapCoupons
-    ) internal wrapETH {
+    ) internal wrapAndRefundETH {
         positionPermitParams.tryPermit(_bondPositionManager, tokenId, address(this));
         couponPermitParams.tryPermit(_couponManager, msg.sender, address(this), true);
         address asset = _bondPositionManager.getPosition(tokenId).asset;
