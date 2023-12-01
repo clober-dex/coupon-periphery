@@ -61,7 +61,7 @@ contract CouponLiquidator is ICouponLiquidator, IPositionLocker {
         (uint256 liquidationAmount, uint256 repayAmount, uint256 protocolFeeAmount) =
             _loanPositionManager.liquidate(positionId, maxRepayAmount);
 
-        ISubstitute(position.debtToken).ensureThisBalance(payer, repayAmount);
+        ISubstitute(position.debtToken).ensureBalance(payer, repayAmount);
         IERC20(position.debtToken).approve(address(_loanPositionManager), repayAmount);
         _loanPositionManager.depositToken(position.debtToken, repayAmount);
 
