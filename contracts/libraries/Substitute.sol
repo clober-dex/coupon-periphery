@@ -21,7 +21,6 @@ library SubstituteLibrary {
             amount -= balance;
             if (underlyingBalance < amount) {
                 IERC20(underlyingToken).safeTransferFrom(payer, address(this), amount - underlyingBalance);
-                underlyingBalance = amount;
             }
         }
         IERC20(underlyingToken).approve(address(substitute), amount);
