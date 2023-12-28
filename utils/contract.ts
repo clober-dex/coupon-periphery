@@ -1,4 +1,4 @@
-import { getHRE } from './misc'
+import { getHRE, liveLog } from './misc'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { Address, encodePacked, Hex, numberToHex } from 'viem'
 
@@ -6,6 +6,18 @@ export const getDeployedAddress = async (name: string): Promise<Address> => {
   const hre = getHRE()
   const deployments = await hre.deployments.get(name)
   return `0x${deployments.address.startsWith('0x') ? deployments.address.slice(2) : deployments.address}`
+}
+
+export const verify = async (contractAddress: string, args: any[]) => {
+  liveLog(`Verifying Contract: ${contractAddress}`)
+  try {
+    await getHRE().run('verify:verify', {
+      address: contractAddress,
+      constructorArguments: args,
+    })
+  } catch (e) {
+    console.log(e)
+  }
 }
 
 export const deployWithVerify = async (hre: HardhatRuntimeEnvironment, name: string, args?: any[]) => {
