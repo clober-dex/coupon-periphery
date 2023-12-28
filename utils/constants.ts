@@ -17,6 +17,12 @@ export const TREASURY: { [chainId: number]: Address } = {
   [TESTNET_ID]: '0x000000000000000000000000000000000000dEaD',
 }
 
+export const AAVE_V3_POOL: { [chainId: number]: Address } = {
+  [arbitrum.id]: '0x794a61358D6845594F94dc1DB02A252b5b4814aD',
+  [arbitrumGoerli.id]: '0x20fa38a4f8Af2E36f1Cc14caad2E603fbA5C535c',
+  [TESTNET_ID]: '0x794a61358D6845594F94dc1DB02A252b5b4814aD',
+}
+
 export const ASSET_POOL: { [chainId: number]: Address } = {
   [arbitrum.id]: '0xBA4B7f0Dd297C68Ca472da58CfE1338B9E7A0D9e',
 }
