@@ -80,7 +80,7 @@ export const TOKENS: { [chainId: number]: { [name: TokenKeys]: Address } } = {
   },
 }
 
-export const AAVE_SUBSTITUTES: { [chainId: number]: { [name: TokenKeys]: Address } } = {
+export const SUBSTITUTES: { [chainId: number]: { [name: TokenKeys]: Address } } = {
   [arbitrum.id]: {
     [TOKEN_KEYS.WETH]: '0xAb6c37355D6C06fcF73Ab0E049d9Cf922f297573',
     [TOKEN_KEYS.USDC]: '0x7Ed1145045c8B754506d375Cdf90734550d1077e',
