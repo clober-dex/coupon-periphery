@@ -63,6 +63,7 @@ export const TOKEN_KEYS = {
   DAI: 'DAI',
   USDT: 'USDT',
   WBTC: 'WBTC',
+  ARB: 'ARB',
 }
 
 export type TokenKeys = (typeof TOKEN_KEYS)[keyof typeof TOKEN_KEYS]
@@ -76,6 +77,7 @@ export const TOKENS: { [chainId: number]: { [name: TokenKeys]: Address } } = {
     [TOKEN_KEYS.DAI]: '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1',
     [TOKEN_KEYS.USDT]: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
     [TOKEN_KEYS.WBTC]: '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f',
+    [TOKEN_KEYS.ARB]: '0x912CE59144191C1204E64559FE8253a0e49E6548',
   },
   [arbitrumGoerli.id]: {
     [TOKEN_KEYS.WETH]: '0x4284186b053ACdBA28E8B26E99475d891533086a',
@@ -95,6 +97,7 @@ export const SUBSTITUTES: { [chainId: number]: { [name: TokenKeys]: Address } } 
     [TOKEN_KEYS.USDCe]: '0x322d24b60795e3D4f0DD85F54FAbcd63A85dFF82',
     [TOKEN_KEYS.USDT]: '0x26185cC53695240f9298e1e81Fd95612aA19D68b',
     [TOKEN_KEYS.WBTC]: '0xCf94152a31BBC050603Ae3186b394269E4f0A8Fe',
+    [TOKEN_KEYS.ARB]: '0x3D3d18B22b6EB47ffC21ca226E506Bd1C5C7cc00',
   },
   [arbitrumGoerli.id]: {
     [TOKEN_KEYS.WETH]: '0x37FD1b14Ba333889bC6683D7ADec9c1aE11F3227',
