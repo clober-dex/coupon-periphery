@@ -10,9 +10,9 @@ import 'hardhat-contract-sizer'
 import 'hardhat-abi-exporter'
 import '@nomicfoundation/hardhat-verify'
 
-import './task/index'
 import { HardhatConfig } from 'hardhat/types'
 import * as networkInfos from 'viem/chains'
+import path from 'path'
 
 dotenv.config()
 
@@ -20,6 +20,18 @@ const chainIdMap: { [key: string]: string } = {}
 for (const [networkName, networkInfo] of Object.entries(networkInfos)) {
   // @ts-ignore
   chainIdMap[networkInfo.id] = networkName
+}
+
+const SKIP_LOAD = process.env.SKIP_LOAD === 'true'
+
+// Prevent to load scripts before compilation and typechain
+if (!SKIP_LOAD) {
+  const tasksPath = path.join(__dirname, 'task')
+  fs.readdirSync(tasksPath)
+    .filter((pth) => pth.includes('.ts'))
+    .forEach((task) => {
+      require(`${tasksPath}/${task}`)
+    })
 }
 
 let privateKey: string

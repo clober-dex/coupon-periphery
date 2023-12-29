@@ -2,7 +2,7 @@ import { task } from 'hardhat/config'
 import { hardhat } from 'viem/chains'
 import { decodeEventLog, zeroAddress } from 'viem'
 import {
-  AAVE_SUBSTITUTES,
+  SUBSTITUTES,
   CLOBER_FACTORY,
   COUPON_MANAGER,
   TREASURY,
@@ -30,7 +30,7 @@ task('coupon:deploy-wrapped-token')
     const chainId = hre.network.config.chainId ?? hardhat.id
     const couponManager = await hre.viem.getContractAt('ICouponManager', COUPON_MANAGER[chainId])
     const wrapped1155Factory = await hre.viem.getContractAt('IWrapped1155Factory', WRAPPED1155_FACTORY[chainId])
-    const token = AAVE_SUBSTITUTES[chainId][asset]
+    const token = SUBSTITUTES[chainId][asset]
     if (epoch < (await couponManager.read.currentEpoch())) {
       throw new Error('Cannot deploy for past epoch')
     }
@@ -70,7 +70,7 @@ task('coupon:create-clober-market')
       'BorrowController',
       await getDeployedAddress('BorrowController'),
     )
-    const token = AAVE_SUBSTITUTES[chainId][asset]
+    const token = SUBSTITUTES[chainId][asset]
     if (epoch < (await couponManager.read.currentEpoch())) {
       throw new Error('Cannot deploy for past epoch')
     }
@@ -127,7 +127,7 @@ task('coupon:migrate-market-register')
     }
     const chainId = hre.network.config.chainId ?? hardhat.id
     const couponManager = await hre.viem.getContractAt('ICouponManager', COUPON_MANAGER[chainId])
-    const token = AAVE_SUBSTITUTES[chainId][asset]
+    const token = SUBSTITUTES[chainId][asset]
     if (epoch < (await couponManager.read.currentEpoch())) {
       throw new Error('Cannot deploy for past epoch')
     }

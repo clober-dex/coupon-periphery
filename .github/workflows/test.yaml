@@ -45,6 +45,8 @@ jobs:
         run: npm list
       - name: Install Dependencies
         run: npm install --ignore-scripts
+      - name: Hardhat compile
+        run: npm run compile
       - name: Hardhat test
         run: npm run test:hardhat
 
