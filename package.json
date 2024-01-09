@@ -4,7 +4,7 @@
   "description": "",
   "scripts": {
     "fork": "npx hardhat node",
-    "compile": "TS_NODE_TRANSPILE_ONLY=1 npx hardhat compile",
+    "compile": "TS_NODE_TRANSPILE_ONLY=1 SKIP_LOAD=true npx hardhat compile",
     "coverage:forge": "forge coverage --report lcov",
     "coverage:local": "rm -rf coverage && forge coverage --report lcov && genhtml lcov.info -o coverage --branch-coverage && open coverage/index.html",
     "test:hardhat": "npx hardhat test",
