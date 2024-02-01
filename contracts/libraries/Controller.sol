@@ -177,7 +177,7 @@ abstract contract Controller is
         return _couponMarkets[couponKey.toId()];
     }
 
-    function setCouponMarket(CouponKey memory couponKey, address cloberMarket) public virtual onlyOwner {
+    function setCouponMarket(CouponKey memory couponKey, address cloberMarket) external onlyOwner {
         bytes memory metadata = Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKey);
         uint256 id = couponKey.toId();
         address wrappedCoupon = _wrapped1155Factory.getWrapped1155(address(_couponManager), id, metadata);
