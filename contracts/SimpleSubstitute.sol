@@ -20,12 +20,9 @@ contract SimpleSubstitute is ISubstitute, ERC20Permit, Ownable2Step {
 
     address public override treasury;
 
-    constructor(address underlyingToken_, address treasury_, address owner_)
-        ERC20Permit(string.concat("", IERC20Metadata(underlyingToken_).name()))
-        ERC20(
-            string.concat(" ", IERC20Metadata(underlyingToken_).name()),
-            string.concat("", IERC20Metadata(underlyingToken_).symbol())
-        )
+    constructor(string memory name_, string memory symbol_, address underlyingToken_, address treasury_, address owner_)
+        ERC20Permit(name_)
+        ERC20(name_, symbol_)
         Ownable(owner_)
     {
         underlyingToken = underlyingToken_;

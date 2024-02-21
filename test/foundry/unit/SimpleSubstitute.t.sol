@@ -13,7 +13,7 @@ contract SimpleSubstituteUnitTest is Test {
 
     function setUp() public {
         token = new MockToken("Mock", "MCK", 18);
-        substitute = new SimpleSubstitute(address(token), address(this), address(this));
+        substitute = new SimpleSubstitute("", "", address(token), address(this), address(this));
 
         token.mint(address(this), 1000000000 ether);
         token.approve(address(substitute), type(uint256).max);
