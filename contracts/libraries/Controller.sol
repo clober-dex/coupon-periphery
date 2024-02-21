@@ -118,7 +118,7 @@ abstract contract Controller is
         uint256 inputAmount,
         uint256 outputAmount,
         bytes calldata data
-    ) external payable {
+    ) external payable virtual {
         // check if caller is registered market
         if (_cloberMarketFactory.getMarketHost(msg.sender) == address(0)) revert InvalidAccess();
 
