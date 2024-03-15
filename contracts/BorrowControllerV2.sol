@@ -86,7 +86,6 @@ contract BorrowController is IBorrowControllerV2, ControllerV2, IPositionLocker 
             couponsToBurn,
             interestThreshold
         );
-        _ensureBalance(position.asset, user, amountDelta > 0 ? uint256(amountDelta) : 0);
 
         if (collateralDelta > 0) {
             _ensureBalance(position.collateralToken, user, uint256(collateralDelta));
@@ -94,6 +93,7 @@ contract BorrowController is IBorrowControllerV2, ControllerV2, IPositionLocker 
             _loanPositionManager.depositToken(position.collateralToken, uint256(collateralDelta));
         }
         if (debtDelta < 0) {
+            _ensureBalance(position.asset, user, uint256(-debtDelta));
             IERC20(position.debtToken).approve(address(_loanPositionManager), uint256(-debtDelta));
             _loanPositionManager.depositToken(position.debtToken, uint256(-debtDelta));
         }

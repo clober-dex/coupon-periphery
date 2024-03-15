@@ -71,9 +71,8 @@ contract DepositControllerV2 is IDepositControllerV2, ControllerV2, IPositionLoc
             interestThreshold
         );
 
-        _ensureBalance(position.asset, user, amountDelta > 0 ? uint256(amountDelta) : 0);
-
         if (amountDelta > 0) {
+            _ensureBalance(position.asset, user, uint256(amountDelta));
             IERC20(position.asset).approve(address(_bondPositionManager), uint256(amountDelta));
             _bondPositionManager.depositToken(position.asset, uint256(amountDelta));
         }
