@@ -9,7 +9,7 @@ contract MockBookManager {
         IHooks hooks;
         return BookKey({
             base: Currency.NATIVE,
-            unit: 10**6,
+            unit: 10 ** 6,
             quote: Currency.NATIVE,
             makerPolicy: feePolicy,
             hooks: hooks,

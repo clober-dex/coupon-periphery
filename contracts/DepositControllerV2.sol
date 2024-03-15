@@ -63,13 +63,7 @@ contract DepositControllerV2 is IDepositControllerV2, ControllerV2, IPositionLoc
             _wrapCoupons(couponsToMint);
         }
 
-        _executeCouponTrade(
-            user,
-            position.asset,
-            couponsToMint,
-            couponsToBurn,
-            interestThreshold
-        );
+        _executeCouponTrade(user, position.asset, couponsToMint, couponsToBurn, interestThreshold);
 
         if (amountDelta > 0) {
             _ensureBalance(position.asset, user, uint256(amountDelta));

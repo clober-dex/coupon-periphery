@@ -11,9 +11,7 @@ contract MockController {
         ERC20PermitParams[] calldata erc20PermitParamsList,
         ERC721PermitParams[] calldata erc721PermitParamsList,
         uint64 deadline
-    ) external payable {
-
-    }
+    ) external payable {}
 
     receive() external payable {}
 }

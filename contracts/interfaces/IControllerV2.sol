@@ -6,9 +6,7 @@ import {Epoch} from "../libraries/Epoch.sol";
 import {BookId} from "../external/clober-v2/BookId.sol";
 
 interface IControllerV2 {
-    event SetCouponMarket(
-        address indexed asset, Epoch indexed epoch, BookId sellMarketBookId, BookId buyMarketBookId
-    );
+    event SetCouponMarket(address indexed asset, Epoch indexed epoch, BookId sellMarketBookId, BookId buyMarketBookId);
 
     error InvalidAccess();
     error InvalidMarket();

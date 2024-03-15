@@ -79,13 +79,7 @@ contract BorrowController is IBorrowControllerV2, ControllerV2, IPositionLocker 
             _swap(position.debtToken, position.collateralToken, swapParams.amount, swapParams.data);
         }
 
-        _executeCouponTrade(
-            user,
-            position.debtToken,
-            couponsToMint,
-            couponsToBurn,
-            interestThreshold
-        );
+        _executeCouponTrade(user, position.debtToken, couponsToMint, couponsToBurn, interestThreshold);
 
         if (collateralDelta > 0) {
             _ensureBalance(position.collateralToken, user, uint256(collateralDelta));

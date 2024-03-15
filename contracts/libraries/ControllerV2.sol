@@ -31,12 +31,7 @@ import {SubstituteLibrary} from "./Substitute.sol";
 
 import {Epoch} from "./Epoch.sol";
 
-abstract contract ControllerV2 is
-    IControllerV2,
-    ERC1155Holder,
-    Ownable2Step,
-    ReentrancyGuard
-{
+abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, ReentrancyGuard {
     using SafeCast for uint256;
     using BookIdLibrary for IBookManager.BookKey;
     using SafeERC20 for IERC20;
@@ -130,7 +125,7 @@ abstract contract ControllerV2 is
                     hookData: ""
                 })
             );
-            IERC20(Currency.unwrap (key.base)).approve(address(_cloberController), amount);
+            IERC20(Currency.unwrap(key.base)).approve(address(_cloberController), amount);
             // Todo check if (!key.base.isNative())
         }
 
@@ -138,9 +133,14 @@ abstract contract ControllerV2 is
             IERC20(token).approve(address(_cloberController), uint256(interestThreshold));
         }
         _cloberController.execute(
-            actionList, paramsDataList, tokensToSettle, erc20PermitParamsList, erc721PermitParamsList, uint64(block.timestamp)
+            actionList,
+            paramsDataList,
+            tokensToSettle,
+            erc20PermitParamsList,
+            erc721PermitParamsList,
+            uint64(block.timestamp)
         );
-        if (interestThreshold < 0 && IERC20(token).balanceOf(address (this)) < uint256(-interestThreshold)) {
+        if (interestThreshold < 0 && IERC20(token).balanceOf(address(this)) < uint256(-interestThreshold)) {
             revert ControllerSlippage();
         }
     }
