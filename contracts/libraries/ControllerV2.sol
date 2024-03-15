@@ -125,8 +125,8 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
                     hookData: ""
                 })
             );
+            // key.base can't be Currency.NATIVE
             IERC20(Currency.unwrap(key.base)).approve(address(_cloberController), amount);
-            // Todo check if (!key.base.isNative())
         }
 
         if (interestThreshold > 0) {
