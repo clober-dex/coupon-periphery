@@ -28,11 +28,11 @@ import {ReentrancyGuard} from "./ReentrancyGuard.sol";
 import {Epoch} from "./Epoch.sol";
 
 abstract contract Controller is
-IController,
-ERC1155Holder,
-CloberMarketSwapCallbackReceiver,
-Ownable2Step,
-ReentrancyGuard
+    IController,
+    ERC1155Holder,
+    CloberMarketSwapCallbackReceiver,
+    Ownable2Step,
+    ReentrancyGuard
 {
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
@@ -47,7 +47,7 @@ ReentrancyGuard
     mapping(uint256 couponId => address market) internal _couponMarkets;
 
     constructor(address wrapped1155Factory, address cloberMarketFactory, address couponManager, address weth)
-    Ownable(msg.sender)
+        Ownable(msg.sender)
     {
         _wrapped1155Factory = IWrapped1155Factory(wrapped1155Factory);
         _cloberMarketFactory = CloberMarketFactory(cloberMarketFactory);
@@ -74,7 +74,7 @@ ReentrancyGuard
                 mstore(couponsToBurn, sub(mload(couponsToBurn), 1))
             }
             bytes memory data =
-                                abi.encode(user, lastCoupon, couponsToMint, couponsToBurn, amountToPay, remainingInterest);
+                abi.encode(user, lastCoupon, couponsToMint, couponsToBurn, amountToPay, remainingInterest);
             assembly {
                 mstore(couponsToBurn, add(mload(couponsToBurn), 1))
             }
@@ -88,7 +88,7 @@ ReentrancyGuard
                 mstore(couponsToMint, sub(mload(couponsToMint), 1))
             }
             bytes memory data =
-                                abi.encode(user, lastCoupon, couponsToMint, couponsToBurn, amountToPay, remainingInterest);
+                abi.encode(user, lastCoupon, couponsToMint, couponsToBurn, amountToPay, remainingInterest);
             assembly {
                 mstore(couponsToMint, add(mload(couponsToMint), 1))
             }
@@ -119,7 +119,7 @@ ReentrancyGuard
         uint256 amountToPay;
         int256 remainingInterest;
         (user, lastCoupon, couponsToMint, couponsToBurn, amountToPay, remainingInterest) =
-        abi.decode(data, (address, Coupon, Coupon[], Coupon[], uint256, int256));
+            abi.decode(data, (address, Coupon, Coupon[], Coupon[], uint256, int256));
 
         if (asset == inputToken) {
             remainingInterest -= inputAmount.toInt256();
@@ -196,7 +196,7 @@ ReentrancyGuard
         CloberMarketFactory.MarketInfo memory marketInfo = _cloberMarketFactory.getMarketInfo(cloberMarket);
         if (
             (marketInfo.host == address(0)) || (CloberOrderBook(cloberMarket).baseToken() != wrappedCoupon)
-            || (CloberOrderBook(cloberMarket).quoteToken() != couponKey.asset)
+                || (CloberOrderBook(cloberMarket).quoteToken() != couponKey.asset)
         ) {
             revert InvalidMarket();
         }
