@@ -5,17 +5,19 @@ pragma solidity ^0.8.0;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {IDepositController} from "./interfaces/IDepositController.sol";
+import {IDepositControllerV2} from "./interfaces/IDepositControllerV2.sol";
 import {IBondPositionManager} from "./interfaces/IBondPositionManager.sol";
 import {IPositionLocker} from "./interfaces/IPositionLocker.sol";
 import {BondPosition} from "./libraries/BondPosition.sol";
 import {Epoch, EpochLibrary} from "./libraries/Epoch.sol";
 import {CouponKey} from "./libraries/CouponKey.sol";
 import {Coupon} from "./libraries/Coupon.sol";
-import {Controller} from "./libraries/Controller.sol";
+import {ISubstitute} from "./interfaces/ISubstitute.sol";
+import {SubstituteLibrary} from "./libraries/Substitute.sol";
+import {ControllerV2} from "./libraries/ControllerV2.sol";
 import {ERC20PermitParams, PermitSignature, PermitParamsLibrary} from "./libraries/PermitParams.sol";
 
-contract DepositController is IDepositController, Controller, IPositionLocker {
+contract DepositControllerV2 is IDepositControllerV2, ControllerV2, IPositionLocker {
     using PermitParamsLibrary for *;
     using EpochLibrary for Epoch;
 
@@ -28,11 +30,12 @@ contract DepositController is IDepositController, Controller, IPositionLocker {
 
     constructor(
         address wrapped1155Factory,
-        address cloberMarketFactory,
+        address cloberController,
         address couponManager,
+        address bookManager,
         address weth,
         address bondPositionManager
-    ) Controller(wrapped1155Factory, cloberMarketFactory, couponManager, weth) {
+    ) ControllerV2(wrapped1155Factory, cloberController, couponManager, bookManager, weth) {
         _bondPositionManager = IBondPositionManager(bondPositionManager);
     }
 
@@ -65,9 +68,10 @@ contract DepositController is IDepositController, Controller, IPositionLocker {
             position.asset,
             couponsToMint,
             couponsToBurn,
-            amountDelta > 0 ? uint256(amountDelta) : 0,
             interestThreshold
         );
+
+        _ensureBalance(position.asset, user, amountDelta > 0 ? uint256(amountDelta) : 0);
 
         if (amountDelta > 0) {
             IERC20(position.asset).approve(address(_bondPositionManager), uint256(amountDelta));
@@ -87,7 +91,7 @@ contract DepositController is IDepositController, Controller, IPositionLocker {
         Epoch expiredWith,
         int256 minEarnInterest,
         ERC20PermitParams calldata tokenPermitParams
-    ) external payable nonReentrant wrapETH returns (uint256 positionId) {
+    ) external payable nonReentrant wrapAndRefundETH returns (uint256 positionId) {
         tokenPermitParams.tryPermit(_getUnderlyingToken(asset), msg.sender, address(this));
         bytes memory lockData = abi.encode(amount, expiredWith, -minEarnInterest);
         bytes memory result = _bondPositionManager.lock(abi.encode(0, msg.sender, abi.encode(asset, lockData)));
@@ -105,7 +109,7 @@ contract DepositController is IDepositController, Controller, IPositionLocker {
         int256 interestThreshold,
         ERC20PermitParams calldata tokenPermitParams,
         PermitSignature calldata positionPermitParams
-    ) external payable nonReentrant wrapETH onlyPositionOwner(positionId) {
+    ) external payable nonReentrant wrapAndRefundETH onlyPositionOwner(positionId) {
         positionPermitParams.tryPermit(_bondPositionManager, positionId, address(this));
         BondPosition memory position = _bondPositionManager.getPosition(positionId);
         tokenPermitParams.tryPermit(position.asset, msg.sender, address(this));

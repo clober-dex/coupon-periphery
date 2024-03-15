@@ -5,17 +5,17 @@ pragma solidity ^0.8.0;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {IBorrowController} from "./interfaces/IBorrowController.sol";
+import {IBorrowControllerV2} from "./interfaces/IBorrowControllerV2.sol";
 import {ILoanPositionManager} from "./interfaces/ILoanPositionManager.sol";
 import {ISubstitute} from "./interfaces/ISubstitute.sol";
 import {IPositionLocker} from "./interfaces/IPositionLocker.sol";
 import {LoanPosition} from "./libraries/LoanPosition.sol";
 import {Coupon} from "./libraries/Coupon.sol";
 import {Epoch, EpochLibrary} from "./libraries/Epoch.sol";
-import {Controller} from "./libraries/Controller.sol";
+import {ControllerV2} from "./libraries/ControllerV2.sol";
 import {ERC20PermitParams, PermitSignature, PermitParamsLibrary} from "./libraries/PermitParams.sol";
 
-contract BorrowController is IBorrowController, Controller, IPositionLocker {
+contract BorrowController is IBorrowControllerV2, ControllerV2, IPositionLocker {
     using PermitParamsLibrary for *;
     using EpochLibrary for Epoch;
 
@@ -29,12 +29,13 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
 
     constructor(
         address wrapped1155Factory,
-        address cloberMarketFactory,
+        address cloberController,
         address couponManager,
+        address bookManager,
         address weth,
         address loanPositionManager,
         address router
-    ) Controller(wrapped1155Factory, cloberMarketFactory, couponManager, weth) {
+    ) ControllerV2(wrapped1155Factory, cloberController, couponManager, bookManager, weth) {
         _loanPositionManager = ILoanPositionManager(loanPositionManager);
         _router = router;
     }
@@ -83,9 +84,9 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
             position.debtToken,
             couponsToMint,
             couponsToBurn,
-            debtDelta < 0 ? uint256(-debtDelta) : 0,
             interestThreshold
         );
+        _ensureBalance(position.asset, user, amountDelta > 0 ? uint256(amountDelta) : 0);
 
         if (collateralDelta > 0) {
             _ensureBalance(position.collateralToken, user, uint256(collateralDelta));

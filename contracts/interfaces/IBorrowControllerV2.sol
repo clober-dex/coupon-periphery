@@ -2,11 +2,11 @@
 
 pragma solidity ^0.8.0;
 
-import {IController} from "./IController.sol";
+import {IControllerV2} from "./IControllerV2.sol";
 import {ERC20PermitParams, PermitSignature} from "../libraries/PermitParams.sol";
 import {Epoch} from "../libraries/Epoch.sol";
 
-interface IBorrowController is IController {
+interface IBorrowControllerV2 is IControllerV2 {
     struct SwapParams {
         address inSubstitute;
         uint256 amount;

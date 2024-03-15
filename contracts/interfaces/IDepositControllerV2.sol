@@ -2,11 +2,11 @@
 
 pragma solidity ^0.8.0;
 
-import {IController} from "./IController.sol";
+import {IControllerV2} from "./IControllerV2.sol";
 import {ERC20PermitParams, PermitSignature} from "../libraries/PermitParams.sol";
 import {Epoch} from "../libraries/Epoch.sol";
 
-interface IDepositController is IController {
+interface IDepositControllerV2 is IControllerV2 {
     function deposit(
         address token,
         uint256 amount,
