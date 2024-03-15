@@ -199,23 +199,26 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         return (_couponSellMarkets[couponKey.toId()], _couponBuyMarkets[couponKey.toId()]);
     }
 
-    function setCouponMarket(
+    function setCouponBookKey(
         CouponKey memory couponKey,
-        IBookManager.BookKey calldata sellMarketKey,
-        IBookManager.BookKey calldata buyMarketKey
+        IBookManager.BookKey calldata sellBookKey,
+        IBookManager.BookKey calldata buyBookKey
     ) public virtual onlyOwner {
         bytes memory metadata = Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKey);
         uint256 couponId = couponKey.toId();
         address wrappedCoupon = _wrapped1155Factory.getWrapped1155(address(_couponManager), couponId, metadata);
 
-        BookId sellMarketBookId = sellMarketKey.toId();
-        BookId buyMarketBookId = buyMarketKey.toId();
-        if (_bookManager.getBookKey(sellMarketBookId).unit == 0 || _bookManager.getBookKey(buyMarketBookId).unit == 0) {
+        BookId sellMarketBookId = sellBookKey.toId();
+        BookId buyMarketBookId = buyBookKey.toId();
+        if (
+            _bookManager.getBookKey(sellMarketBookId).unit != sellBookKey.unit
+                || _bookManager.getBookKey(buyMarketBookId).unit != buyMarketBookId.unit
+        ) {
             revert InvalidMarket();
         }
 
-        _couponSellMarkets[couponId] = sellMarketKey;
-        _couponBuyMarkets[couponId] = buyMarketKey;
+        _couponSellMarkets[couponId] = sellBookKey;
+        _couponBuyMarkets[couponId] = buyBookKey;
 
         emit SetCouponMarket(couponKey.asset, couponKey.epoch, sellMarketBookId, buyMarketBookId);
     }
