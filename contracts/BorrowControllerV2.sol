@@ -87,7 +87,7 @@ contract BorrowController is IBorrowControllerV2, ControllerV2, IPositionLocker 
             _loanPositionManager.depositToken(position.collateralToken, uint256(collateralDelta));
         }
         if (debtDelta < 0) {
-            _ensureBalance(position.asset, user, uint256(-debtDelta));
+            _ensureBalance(position.debtToken, user, uint256(-debtDelta));
             IERC20(position.debtToken).approve(address(_loanPositionManager), uint256(-debtDelta));
             _loanPositionManager.depositToken(position.debtToken, uint256(-debtDelta));
         }
