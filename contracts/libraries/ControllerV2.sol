@@ -52,8 +52,8 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
     constructor(
         address wrapped1155Factory,
         address cloberController,
-        address couponManager,
         address bookManager,
+        address couponManager,
         address weth
     ) Ownable(msg.sender) {
         _wrapped1155Factory = IWrapped1155Factory(wrapped1155Factory);

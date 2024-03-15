@@ -31,11 +31,11 @@ contract DepositControllerV2 is IDepositControllerV2, ControllerV2, IPositionLoc
     constructor(
         address wrapped1155Factory,
         address cloberController,
-        address couponManager,
         address bookManager,
+        address couponManager,
         address weth,
         address bondPositionManager
-    ) ControllerV2(wrapped1155Factory, cloberController, couponManager, bookManager, weth) {
+    ) ControllerV2(wrapped1155Factory, cloberController, bookManager, couponManager, weth) {
         _bondPositionManager = IBondPositionManager(bondPositionManager);
     }
 
