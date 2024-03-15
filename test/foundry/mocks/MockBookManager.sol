@@ -4,16 +4,15 @@ pragma solidity ^0.8.0;
 import "../../../contracts/external/clober-v2/BookId.sol";
 
 contract MockBookManager {
-    function getBookKey(BookId id) external view returns (BookKey memory) {
-        FeePolicy memory feePolicy;
+    function getBookKey(BookId id) external view returns (IBookManager.BookKey memory) {
         IHooks hooks;
-        return BookKey({
-            base: Currency.NATIVE,
+        return IBookManager.BookKey({
+            base: CurrencyLibrary.NATIVE,
             unit: 10 ** 6,
-            quote: Currency.NATIVE,
-            makerPolicy: feePolicy,
+            quote: CurrencyLibrary.NATIVE,
+            makerPolicy: FeePolicyLibrary.encode(true, -100),
             hooks: hooks,
-            takerPolicy: feePolicy
+            takerPolicy: FeePolicyLibrary.encode(true, -100)
         });
     }
 }

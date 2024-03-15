@@ -116,7 +116,7 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
                 })
             );
         }
-        if (quote != address (0)) IERC20(quote).approve(address(_cloberController), amount);
+        if (quote != address(0)) IERC20(quote).approve(address(_cloberController), amount);
 
         length = couponsToMint.length;
         for (uint256 i = 0; i < length; ++i) {
