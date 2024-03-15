@@ -14,6 +14,7 @@ interface IDepositController is IController {
         int256 minEarnInterest,
         ERC20PermitParams calldata tokenPermitParams
     ) external payable returns (uint256 positionId);
+
     function adjust(
         uint256 positionId,
         uint256 amount,
