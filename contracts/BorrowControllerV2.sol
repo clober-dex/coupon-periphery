@@ -15,7 +15,7 @@ import {Epoch, EpochLibrary} from "./libraries/Epoch.sol";
 import {ControllerV2} from "./libraries/ControllerV2.sol";
 import {ERC20PermitParams, PermitSignature, PermitParamsLibrary} from "./libraries/PermitParams.sol";
 
-contract BorrowController is IBorrowControllerV2, ControllerV2, IPositionLocker {
+contract BorrowControllerV2 is IBorrowControllerV2, ControllerV2, IPositionLocker {
     using PermitParamsLibrary for *;
     using EpochLibrary for Epoch;
 

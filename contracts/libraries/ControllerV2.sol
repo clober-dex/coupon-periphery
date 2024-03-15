@@ -57,7 +57,7 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         address weth
     ) Ownable(msg.sender) {
         _wrapped1155Factory = IWrapped1155Factory(wrapped1155Factory);
-        _cloberController = IController(_cloberController);
+        _cloberController = IController(cloberController);
         _couponManager = ICouponManager(couponManager);
         _bookManager = IBookManager(bookManager);
 
@@ -98,10 +98,15 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         IController.ERC20PermitParams[] memory erc20PermitParamsList;
         IController.ERC721PermitParams[] memory erc721PermitParamsList;
 
+        uint256 amount;
+        address quote; // all quote is same
+
         length = couponsToBurn.length;
         for (uint256 i = 0; i < length; ++i) {
-            actionList[couponsToBurn.length + i] = IController.Action.TAKE;
+            actionList[i] = IController.Action.TAKE;
             IBookManager.BookKey memory key = _couponBuyMarkets[couponsToBurn[i].key.toId()];
+            quote = Currency.unwrap(key.quote);
+            amount += couponsToBurn[i].amount;
             paramsDataList[i] = abi.encode(
                 IController.TakeOrderParams({
                     id: key.toId(),
@@ -111,12 +116,13 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
                 })
             );
         }
+        if (quote != address (0)) IERC20(quote).approve(address(_cloberController), amount);
 
         length = couponsToMint.length;
         for (uint256 i = 0; i < length; ++i) {
-            actionList[i] = IController.Action.SPEND;
+            actionList[couponsToBurn.length + i] = IController.Action.SPEND;
             IBookManager.BookKey memory key = _couponSellMarkets[couponsToMint[i].key.toId()];
-            uint256 amount = couponsToMint[i].amount;
+            amount = couponsToMint[i].amount;
             paramsDataList[couponsToBurn.length + i] = abi.encode(
                 IController.SpendOrderParams({
                     id: key.toId(),
@@ -212,7 +218,7 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         BookId buyMarketBookId = buyBookKey.toId();
         if (
             _bookManager.getBookKey(sellMarketBookId).unit != sellBookKey.unit
-                || _bookManager.getBookKey(buyMarketBookId).unit != buyMarketBookId.unit
+                || _bookManager.getBookKey(buyMarketBookId).unit != buyBookKey.unit
         ) {
             revert InvalidMarket();
         }
