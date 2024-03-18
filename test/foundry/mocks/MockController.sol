@@ -51,7 +51,6 @@ contract MockController {
                     );
                     IERC20(wrappedCoupons[0]).safeTransfer(msg.sender, params.quoteAmount + 1);
                 } else if (BookId.unwrap(params.id) == 4240473993678446490798627048287957591242783559797607980606) {
-                    console.log(IERC20(Constants.COUPON_WETH_SUBSTITUTE).balanceOf(msg.sender));
                     IERC20(Constants.COUPON_WETH_SUBSTITUTE).safeTransferFrom(
                         msg.sender, address(this), params.quoteAmount / 50
                     );
