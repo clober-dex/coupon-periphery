@@ -102,10 +102,13 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
         IERC20(Constants.WETH).approve(waweth, 3_000 ether);
         IAaveTokenSubstitute(waweth).mint(3_000 ether, address(this));
 
+        // create wrapped1155
         couponKeys.push(CouponKey({asset: wausdc, epoch: EpochLibrary.current()}));
         couponKeys.push(CouponKey({asset: waweth, epoch: EpochLibrary.current()}));
+        couponKeys.push(CouponKey({asset: wausdc, epoch: EpochLibrary.current().add(1)}));
+        couponKeys.push(CouponKey({asset: waweth, epoch: EpochLibrary.current().add(1)}));
 
-        for (uint256 i = 0; i < 2; i++) {
+        for (uint256 i = 0; i < 4; i++) {
             address wrappedToken = wrapped1155Factory.requireWrapped1155(
                 address(couponManager),
                 couponKeys[i].toId(),
@@ -129,74 +132,42 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
         IERC20(wausdc).transfer(address(cloberController), IERC20(wausdc).amount(500));
         IERC20(waweth).transfer(address(cloberController), IERC20(waweth).amount(500));
 
-        CouponKey memory key = couponKeys[0];
-        uint256 amount = IERC20(wrappedCoupons[0]).amount(100);
-        Coupon[] memory coupons = Utils.toArr(Coupon(key, amount));
-        vm.prank(Constants.COUPON_LOAN_POSITION_MANAGER);
-        couponManager.mintBatch(address(this), coupons, "");
-        couponManager.safeBatchTransferFrom(
-            address(this),
-            address(wrapped1155Factory),
-            coupons,
-            Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKeys[0])
-        );
-        IERC20(wrappedCoupons[0]).transfer(
-            address(cloberController), IERC20(wrappedCoupons[0]).balanceOf(address(this))
-        );
+        for (uint256 i = 0; i < 4; i++) {
+            CouponKey memory key = couponKeys[i];
+            uint256 amount = IERC20(wrappedCoupons[i]).amount(100);
+            Coupon[] memory coupons = Utils.toArr(Coupon(key, amount));
+            vm.prank(Constants.COUPON_LOAN_POSITION_MANAGER);
+            couponManager.mintBatch(address(this), coupons, "");
+            couponManager.safeBatchTransferFrom(
+                address(this),
+                address(wrapped1155Factory),
+                coupons,
+                Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKeys[i])
+            );
+            IERC20(wrappedCoupons[i]).transfer(
+                address(cloberController), IERC20(wrappedCoupons[i]).balanceOf(address(this))
+            );
 
-        key = couponKeys[1];
-        amount = IERC20(wrappedCoupons[1]).amount(100);
-        coupons = Utils.toArr(Coupon(key, amount));
-        vm.prank(Constants.COUPON_LOAN_POSITION_MANAGER);
-        couponManager.mintBatch(address(this), coupons, "");
-        couponManager.safeBatchTransferFrom(
-            address(this),
-            address(wrapped1155Factory),
-            coupons,
-            Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKeys[1])
-        );
-        IERC20(wrappedCoupons[1]).transfer(
-            address(cloberController), IERC20(wrappedCoupons[1]).balanceOf(address(this))
-        );
+            IHooks hooks;
+            IBookManager.BookKey memory sellBookKey = IBookManager.BookKey({
+                base: Currency.wrap(wrappedCoupons[i]),
+                unit: 10 ** 6,
+                quote: Currency.wrap(i % 2 == 0 ? wausdc : waweth),
+                makerPolicy: FeePolicyLibrary.encode(true, -100),
+                hooks: hooks,
+                takerPolicy: FeePolicyLibrary.encode(true, -100)
+            });
+            IBookManager.BookKey memory buyBookKey = IBookManager.BookKey({
+                base: Currency.wrap(i % 2 == 0 ? wausdc : waweth),
+                unit: 10 ** 6,
+                quote: Currency.wrap(wrappedCoupons[i]),
+                makerPolicy: FeePolicyLibrary.encode(true, -100),
+                hooks: hooks,
+                takerPolicy: FeePolicyLibrary.encode(true, -100)
+            });
 
-        IHooks hooks;
-        IBookManager.BookKey memory sellBookKey = IBookManager.BookKey({
-            base: Currency.wrap(wrappedCoupons[0]),
-            unit: 10 ** 6,
-            quote: Currency.wrap(wausdc),
-            makerPolicy: FeePolicyLibrary.encode(true, -100),
-            hooks: hooks,
-            takerPolicy: FeePolicyLibrary.encode(true, -100)
-        });
-        IBookManager.BookKey memory buyBookKey = IBookManager.BookKey({
-            base: Currency.wrap(wausdc),
-            unit: 10 ** 6,
-            quote: Currency.wrap(wrappedCoupons[0]),
-            makerPolicy: FeePolicyLibrary.encode(true, -100),
-            hooks: hooks,
-            takerPolicy: FeePolicyLibrary.encode(true, -100)
-        });
-
-        borrowController.setCouponBookKey(couponKeys[0], sellBookKey, buyBookKey);
-
-        sellBookKey = IBookManager.BookKey({
-            base: Currency.wrap(wrappedCoupons[1]),
-            unit: 10 ** 6,
-            quote: Currency.wrap(waweth),
-            makerPolicy: FeePolicyLibrary.encode(true, -100),
-            hooks: hooks,
-            takerPolicy: FeePolicyLibrary.encode(true, -100)
-        });
-        buyBookKey = IBookManager.BookKey({
-            base: Currency.wrap(waweth),
-            unit: 10 ** 6,
-            quote: Currency.wrap(wrappedCoupons[1]),
-            makerPolicy: FeePolicyLibrary.encode(true, -100),
-            hooks: hooks,
-            takerPolicy: FeePolicyLibrary.encode(true, -100)
-        });
-
-        borrowController.setCouponBookKey(couponKeys[1], sellBookKey, buyBookKey);
+            borrowController.setCouponBookKey(couponKeys[i], sellBookKey, buyBookKey);
+        }
 
         vm.prank(Constants.USDC_WHALE);
         usdc.transfer(user, usdc.amount(10_000));
@@ -255,120 +226,120 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
         assertEq(loanPosition.debtToken, waweth, "POSITION_DEBT_TOKEN");
     }
 
-    //    function testBorrowMore() public {
-    //        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 2);
-    //
-    //        uint256 beforeUSDCBalance = usdc.balanceOf(user);
-    //        uint256 beforeETHBalance = user.balance;
-    //        LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
-    //        PermitSignature memory permit721Params =
-    //            vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
-    //        IBorrowControllerV2.SwapParams memory swapParams;
-    //        vm.prank(user);
-    //        borrowController.adjust(
-    //            positionId,
-    //            beforeLoanPosition.collateralAmount,
-    //            beforeLoanPosition.debtAmount + 0.5 ether,
-    //            type(int256).max,
-    //            beforeLoanPosition.expiredWith,
-    //            swapParams,
-    //            permit721Params,
-    //            emptyERC20PermitParams,
-    //            emptyERC20PermitParams
-    //        );
-    //        LoanPosition memory afterLoanPosition = loanPositionManager.getPosition(positionId);
-    //
-    //        uint256 borrowMoreAmount = 0.5 ether;
-    //        uint256 couponAmount = 0.04 ether;
-    //
-    //        assertEq(usdc.balanceOf(user), beforeUSDCBalance, "USDC_BALANCE");
-    //        assertGe(user.balance, beforeETHBalance + borrowMoreAmount - couponAmount, "NATIVE_BALANCE_GE");
-    //        assertLe(user.balance, beforeETHBalance + borrowMoreAmount - couponAmount + 0.001 ether, "NATIVE_BALANCE_LE");
-    //        assertEq(beforeLoanPosition.expiredWith, afterLoanPosition.expiredWith, "POSITION_EXPIRE_EPOCH");
-    //        assertEq(beforeLoanPosition.collateralAmount, afterLoanPosition.collateralAmount, "POSITION_COLLATERAL_AMOUNT");
-    //        assertEq(beforeLoanPosition.debtAmount + borrowMoreAmount, afterLoanPosition.debtAmount, "POSITION_DEBT_AMOUNT");
-    //        assertEq(beforeLoanPosition.collateralToken, afterLoanPosition.collateralToken, "POSITION_COLLATERAL_TOKEN");
-    //        assertEq(beforeLoanPosition.debtToken, afterLoanPosition.debtToken, "POSITION_DEBT_TOKEN");
-    //    }
-    //
-    //    function testAddCollateral() public {
-    //        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 2);
-    //
-    //        uint256 beforeUSDCBalance = usdc.balanceOf(user);
-    //        uint256 beforeETHBalance = user.balance;
-    //        LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
-    //        uint256 collateralAmount = usdc.amount(123);
-    //        PermitSignature memory permit721Params =
-    //            vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
-    //        ERC20PermitParams memory permit20Params = vm.signPermit(
-    //            1, IERC20Permit(IAaveTokenSubstitute(wausdc).underlyingToken()), address(borrowController), collateralAmount
-    //        );
-    //        IBorrowController.SwapParams memory swapParams;
-    //        vm.prank(user);
-    //        borrowController.adjust(
-    //            positionId,
-    //            beforeLoanPosition.collateralAmount + collateralAmount,
-    //            beforeLoanPosition.debtAmount,
-    //            0,
-    //            beforeLoanPosition.expiredWith,
-    //            swapParams,
-    //            permit721Params,
-    //            permit20Params,
-    //            emptyERC20PermitParams
-    //        );
-    //        LoanPosition memory afterLoanPosition = loanPositionManager.getPosition(positionId);
-    //
-    //        assertEq(usdc.balanceOf(user), beforeUSDCBalance - collateralAmount, "USDC_BALANCE");
-    //        assertEq(user.balance, beforeETHBalance, "NATIVE_BALANCE");
-    //        assertEq(beforeLoanPosition.expiredWith, afterLoanPosition.expiredWith, "POSITION_EXPIRE_EPOCH");
-    //        assertEq(
-    //            beforeLoanPosition.collateralAmount + collateralAmount,
-    //            afterLoanPosition.collateralAmount,
-    //            "POSITION_COLLATERAL_AMOUNT"
-    //        );
-    //        assertEq(beforeLoanPosition.debtAmount, afterLoanPosition.debtAmount, "POSITION_DEBT_AMOUNT");
-    //        assertEq(beforeLoanPosition.collateralToken, afterLoanPosition.collateralToken, "POSITION_COLLATERAL_TOKEN");
-    //        assertEq(beforeLoanPosition.debtToken, afterLoanPosition.debtToken, "POSITION_DEBT_TOKEN");
-    //    }
-    //
-    //    function testRemoveCollateral() public {
-    //        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 2);
-    //
-    //        uint256 beforeUSDCBalance = usdc.balanceOf(user);
-    //        uint256 beforeETHBalance = user.balance;
-    //        LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
-    //        uint256 collateralAmount = usdc.amount(123);
-    //        PermitSignature memory permit721Params =
-    //            vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
-    //
-    //        IBorrowController.SwapParams memory swapParams;
-    //        vm.prank(user);
-    //        borrowController.adjust(
-    //            positionId,
-    //            beforeLoanPosition.collateralAmount - collateralAmount,
-    //            beforeLoanPosition.debtAmount,
-    //            0,
-    //            beforeLoanPosition.expiredWith,
-    //            swapParams,
-    //            permit721Params,
-    //            emptyERC20PermitParams,
-    //            emptyERC20PermitParams
-    //        );
-    //        LoanPosition memory afterLoanPosition = loanPositionManager.getPosition(positionId);
-    //
-    //        assertEq(usdc.balanceOf(user), beforeUSDCBalance + collateralAmount, "USDC_BALANCE");
-    //        assertEq(user.balance, beforeETHBalance, "NATIVE_BALANCE");
-    //        assertEq(beforeLoanPosition.expiredWith, afterLoanPosition.expiredWith, "POSITION_EXPIRE_EPOCH");
-    //        assertEq(
-    //            beforeLoanPosition.collateralAmount - collateralAmount,
-    //            afterLoanPosition.collateralAmount,
-    //            "POSITION_COLLATERAL_AMOUNT"
-    //        );
-    //        assertEq(beforeLoanPosition.debtAmount, afterLoanPosition.debtAmount, "POSITION_DEBT_AMOUNT");
-    //        assertEq(beforeLoanPosition.collateralToken, afterLoanPosition.collateralToken, "POSITION_COLLATERAL_TOKEN");
-    //        assertEq(beforeLoanPosition.debtToken, afterLoanPosition.debtToken, "POSITION_DEBT_TOKEN");
-    //    }
-    //
+    function testBorrowMore() public {
+        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 1);
+
+        uint256 beforeUSDCBalance = usdc.balanceOf(user);
+        uint256 beforeETHBalance = user.balance;
+        LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
+        PermitSignature memory permit721Params =
+            vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
+        IBorrowControllerV2.SwapParams memory swapParams;
+        vm.prank(user);
+        borrowController.adjust(
+            positionId,
+            beforeLoanPosition.collateralAmount,
+            beforeLoanPosition.debtAmount + 0.5 ether,
+            type(int256).max,
+            beforeLoanPosition.expiredWith,
+            swapParams,
+            permit721Params,
+            emptyERC20PermitParams,
+            emptyERC20PermitParams
+        );
+        LoanPosition memory afterLoanPosition = loanPositionManager.getPosition(positionId);
+
+        uint256 borrowMoreAmount = 0.5 ether;
+        uint256 couponAmount = 0.01 ether;
+
+        assertEq(usdc.balanceOf(user), beforeUSDCBalance, "USDC_BALANCE");
+        assertGe(user.balance, beforeETHBalance + borrowMoreAmount - couponAmount, "NATIVE_BALANCE_GE");
+        assertLe(user.balance, beforeETHBalance + borrowMoreAmount - couponAmount + 0.001 ether, "NATIVE_BALANCE_LE");
+        assertEq(beforeLoanPosition.expiredWith, afterLoanPosition.expiredWith, "POSITION_EXPIRE_EPOCH");
+        assertEq(beforeLoanPosition.collateralAmount, afterLoanPosition.collateralAmount, "POSITION_COLLATERAL_AMOUNT");
+        assertEq(beforeLoanPosition.debtAmount + borrowMoreAmount, afterLoanPosition.debtAmount, "POSITION_DEBT_AMOUNT");
+        assertEq(beforeLoanPosition.collateralToken, afterLoanPosition.collateralToken, "POSITION_COLLATERAL_TOKEN");
+        assertEq(beforeLoanPosition.debtToken, afterLoanPosition.debtToken, "POSITION_DEBT_TOKEN");
+    }
+
+    function testAddCollateral() public {
+        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 1);
+
+        uint256 beforeUSDCBalance = usdc.balanceOf(user);
+        uint256 beforeETHBalance = user.balance;
+        LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
+        uint256 collateralAmount = usdc.amount(123);
+        PermitSignature memory permit721Params =
+            vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
+        ERC20PermitParams memory permit20Params = vm.signPermit(
+            1, IERC20Permit(IAaveTokenSubstitute(wausdc).underlyingToken()), address(borrowController), collateralAmount
+        );
+        IBorrowControllerV2.SwapParams memory swapParams;
+        vm.prank(user);
+        borrowController.adjust(
+            positionId,
+            beforeLoanPosition.collateralAmount + collateralAmount,
+            beforeLoanPosition.debtAmount,
+            0,
+            beforeLoanPosition.expiredWith,
+            swapParams,
+            permit721Params,
+            permit20Params,
+            emptyERC20PermitParams
+        );
+        LoanPosition memory afterLoanPosition = loanPositionManager.getPosition(positionId);
+
+        assertEq(usdc.balanceOf(user), beforeUSDCBalance - collateralAmount, "USDC_BALANCE");
+        assertEq(user.balance, beforeETHBalance, "NATIVE_BALANCE");
+        assertEq(beforeLoanPosition.expiredWith, afterLoanPosition.expiredWith, "POSITION_EXPIRE_EPOCH");
+        assertEq(
+            beforeLoanPosition.collateralAmount + collateralAmount,
+            afterLoanPosition.collateralAmount,
+            "POSITION_COLLATERAL_AMOUNT"
+        );
+        assertEq(beforeLoanPosition.debtAmount, afterLoanPosition.debtAmount, "POSITION_DEBT_AMOUNT");
+        assertEq(beforeLoanPosition.collateralToken, afterLoanPosition.collateralToken, "POSITION_COLLATERAL_TOKEN");
+        assertEq(beforeLoanPosition.debtToken, afterLoanPosition.debtToken, "POSITION_DEBT_TOKEN");
+    }
+
+    function testRemoveCollateral() public {
+        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 1);
+
+        uint256 beforeUSDCBalance = usdc.balanceOf(user);
+        uint256 beforeETHBalance = user.balance;
+        LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
+        uint256 collateralAmount = usdc.amount(123);
+        PermitSignature memory permit721Params =
+            vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
+
+        IBorrowControllerV2.SwapParams memory swapParams;
+        vm.prank(user);
+        borrowController.adjust(
+            positionId,
+            beforeLoanPosition.collateralAmount - collateralAmount,
+            beforeLoanPosition.debtAmount,
+            0,
+            beforeLoanPosition.expiredWith,
+            swapParams,
+            permit721Params,
+            emptyERC20PermitParams,
+            emptyERC20PermitParams
+        );
+        LoanPosition memory afterLoanPosition = loanPositionManager.getPosition(positionId);
+
+        assertEq(usdc.balanceOf(user), beforeUSDCBalance + collateralAmount, "USDC_BALANCE");
+        assertEq(user.balance, beforeETHBalance, "NATIVE_BALANCE");
+        assertEq(beforeLoanPosition.expiredWith, afterLoanPosition.expiredWith, "POSITION_EXPIRE_EPOCH");
+        assertEq(
+            beforeLoanPosition.collateralAmount - collateralAmount,
+            afterLoanPosition.collateralAmount,
+            "POSITION_COLLATERAL_AMOUNT"
+        );
+        assertEq(beforeLoanPosition.debtAmount, afterLoanPosition.debtAmount, "POSITION_DEBT_AMOUNT");
+        assertEq(beforeLoanPosition.collateralToken, afterLoanPosition.collateralToken, "POSITION_COLLATERAL_TOKEN");
+        assertEq(beforeLoanPosition.debtToken, afterLoanPosition.debtToken, "POSITION_DEBT_TOKEN");
+    }
+
     //    function testExtendLoanDuration() public {
     //        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 2);
     //
@@ -443,45 +414,45 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
     //        assertEq(beforeLoanPosition.debtToken, afterLoanPosition.debtToken, "POSITION_DEBT_TOKEN");
     //    }
     //
-    //    function testRepay() public {
-    //        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 2);
-    //
-    //        uint256 beforeUSDCBalance = usdc.balanceOf(user);
-    //        uint256 beforeETHBalance = user.balance;
-    //        LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
-    //        uint256 repayAmount = 0.3 ether;
-    //        PermitSignature memory permit721Params =
-    //            vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
-    //        ERC20PermitParams memory permit20Params = vm.signPermit(
-    //            1, IERC20Permit(IAaveTokenSubstitute(waweth).underlyingToken()), address(borrowController), repayAmount
-    //        );
-    //
-    //        IBorrowController.SwapParams memory swapParams;
-    //        vm.prank(user);
-    //        borrowController.adjust{value: repayAmount}(
-    //            positionId,
-    //            beforeLoanPosition.collateralAmount,
-    //            beforeLoanPosition.debtAmount - repayAmount,
-    //            0,
-    //            beforeLoanPosition.expiredWith,
-    //            swapParams,
-    //            permit721Params,
-    //            emptyERC20PermitParams,
-    //            permit20Params
-    //        );
-    //        LoanPosition memory afterLoanPosition = loanPositionManager.getPosition(positionId);
-    //
-    //        uint256 couponAmount = 0.012 ether;
-    //
-    //        assertEq(usdc.balanceOf(user), beforeUSDCBalance, "USDC_BALANCE");
-    //        assertLe(user.balance, beforeETHBalance - repayAmount + couponAmount, "NATIVE_BALANCE_GE");
-    //        assertGe(user.balance, beforeETHBalance - repayAmount + couponAmount - 0.0001 ether, "NATIVE_BALANCE_LE");
-    //        assertEq(beforeLoanPosition.expiredWith, afterLoanPosition.expiredWith, "POSITION_EXPIRE_EPOCH");
-    //        assertEq(beforeLoanPosition.collateralAmount, afterLoanPosition.collateralAmount, "POSITION_COLLATERAL_AMOUNT");
-    //        assertEq(beforeLoanPosition.debtAmount, afterLoanPosition.debtAmount + repayAmount, "POSITION_DEBT_AMOUNT");
-    //        assertEq(beforeLoanPosition.collateralToken, afterLoanPosition.collateralToken, "POSITION_COLLATERAL_TOKEN");
-    //        assertEq(beforeLoanPosition.debtToken, afterLoanPosition.debtToken, "POSITION_DEBT_TOKEN");
-    //    }
+    function testRepay() public {
+        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 1);
+
+        uint256 beforeUSDCBalance = usdc.balanceOf(user);
+        uint256 beforeETHBalance = user.balance;
+        LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
+        uint256 repayAmount = 0.3 ether;
+        PermitSignature memory permit721Params =
+            vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
+        ERC20PermitParams memory permit20Params = vm.signPermit(
+            1, IERC20Permit(IAaveTokenSubstitute(waweth).underlyingToken()), address(borrowController), repayAmount
+        );
+
+        IBorrowControllerV2.SwapParams memory swapParams;
+        vm.prank(user);
+        borrowController.adjust{value: repayAmount}(
+            positionId,
+            beforeLoanPosition.collateralAmount,
+            beforeLoanPosition.debtAmount - repayAmount,
+            0,
+            beforeLoanPosition.expiredWith,
+            swapParams,
+            permit721Params,
+            emptyERC20PermitParams,
+            permit20Params
+        );
+        LoanPosition memory afterLoanPosition = loanPositionManager.getPosition(positionId);
+
+        uint256 couponAmount = 0.006 ether;
+
+        assertEq(usdc.balanceOf(user), beforeUSDCBalance, "USDC_BALANCE");
+        assertLe(user.balance, beforeETHBalance - repayAmount + couponAmount, "NATIVE_BALANCE_GE");
+        assertGe(user.balance, beforeETHBalance - repayAmount + couponAmount - 0.0001 ether, "NATIVE_BALANCE_LE");
+        assertEq(beforeLoanPosition.expiredWith, afterLoanPosition.expiredWith, "POSITION_EXPIRE_EPOCH");
+        assertEq(beforeLoanPosition.collateralAmount, afterLoanPosition.collateralAmount, "POSITION_COLLATERAL_AMOUNT");
+        assertEq(beforeLoanPosition.debtAmount, afterLoanPosition.debtAmount + repayAmount, "POSITION_DEBT_AMOUNT");
+        assertEq(beforeLoanPosition.collateralToken, afterLoanPosition.collateralToken, "POSITION_COLLATERAL_TOKEN");
+        assertEq(beforeLoanPosition.debtToken, afterLoanPosition.debtToken, "POSITION_DEBT_TOKEN");
+    }
     //
     //    function testRepayOverCloberMarket() public {
     //        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(200_000), 70 ether, 2);
