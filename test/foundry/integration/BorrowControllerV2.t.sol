@@ -755,54 +755,55 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
     //        assertEq(beforeLoanPosition.debtToken, afterLoanPosition.debtToken, "POSITION_DEBT_TOKEN");
     //    }
     //
-    //    function testExpiredBorrowMore() public {
-    //        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 2);
-    //        LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
-    //        // loan duration is 2 epochs
-    //        vm.warp(EpochLibrary.current().add(2).startTime());
-    //        PermitSignature memory permit721Params =
-    //            vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
-    //
-    //        IBorrowController.SwapParams memory swapParams;
-    //        vm.prank(user);
-    //        vm.expectRevert(abi.encodeWithSelector(ILoanPositionManagerTypes.FullRepaymentRequired.selector));
-    //        borrowController.adjust(
-    //            positionId,
-    //            beforeLoanPosition.collateralAmount,
-    //            beforeLoanPosition.debtAmount + 0.5 ether,
-    //            type(int256).max,
-    //            beforeLoanPosition.expiredWith,
-    //            swapParams,
-    //            permit721Params,
-    //            emptyERC20PermitParams,
-    //            emptyERC20PermitParams
-    //        );
-    //    }
-    //
-    //    function testExpiredReduceCollateral() public {
-    //        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 2);
-    //        LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
-    //        uint256 collateralAmount = usdc.amount(123);
-    //        // loan duration is 2 epochs
-    //        vm.warp(EpochLibrary.current().add(2).startTime());
-    //        PermitSignature memory permit721Params =
-    //            vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
-    //
-    //        IBorrowController.SwapParams memory swapParams;
-    //        vm.prank(user);
-    //        vm.expectRevert(abi.encodeWithSelector(ILoanPositionManagerTypes.FullRepaymentRequired.selector));
-    //        borrowController.adjust(
-    //            positionId,
-    //            beforeLoanPosition.collateralAmount - collateralAmount,
-    //            beforeLoanPosition.debtAmount,
-    //            0,
-    //            beforeLoanPosition.expiredWith,
-    //            swapParams,
-    //            permit721Params,
-    //            emptyERC20PermitParams,
-    //            emptyERC20PermitParams
-    //        );
-    //    }
+
+    function testExpiredBorrowMore() public {
+        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 2);
+        LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
+        // loan duration is 2 epochs
+        vm.warp(EpochLibrary.current().add(2).startTime());
+        PermitSignature memory permit721Params =
+            vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
+
+        IBorrowControllerV2.SwapParams memory swapParams;
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(ILoanPositionManagerTypes.FullRepaymentRequired.selector));
+        borrowController.adjust(
+            positionId,
+            beforeLoanPosition.collateralAmount,
+            beforeLoanPosition.debtAmount + 0.5 ether,
+            type(int256).max,
+            beforeLoanPosition.expiredWith,
+            swapParams,
+            permit721Params,
+            emptyERC20PermitParams,
+            emptyERC20PermitParams
+        );
+    }
+
+    function testExpiredReduceCollateral() public {
+        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 2);
+        LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
+        uint256 collateralAmount = usdc.amount(123);
+        // loan duration is 2 epochs
+        vm.warp(EpochLibrary.current().add(2).startTime());
+        PermitSignature memory permit721Params =
+            vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
+
+        IBorrowControllerV2.SwapParams memory swapParams;
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(ILoanPositionManagerTypes.FullRepaymentRequired.selector));
+        borrowController.adjust(
+            positionId,
+            beforeLoanPosition.collateralAmount - collateralAmount,
+            beforeLoanPosition.debtAmount,
+            0,
+            beforeLoanPosition.expiredWith,
+            swapParams,
+            permit721Params,
+            emptyERC20PermitParams,
+            emptyERC20PermitParams
+        );
+    }
     //
     //    function testOthersPosition() public {
     //        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 2);
