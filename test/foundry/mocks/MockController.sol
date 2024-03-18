@@ -34,6 +34,9 @@ contract MockController {
                 } else if (BookId.unwrap(params.id) == 2050871663329071981865486441148209933927850794997083594453) {
                     IERC20(wrappedCoupons[1]).safeTransferFrom(msg.sender, address(this), params.baseAmount - 1);
                     IERC20(Constants.COUPON_WETH_SUBSTITUTE).safeTransfer(msg.sender, params.baseAmount / 50);
+                } else if (BookId.unwrap(params.id) == 660651708250344502034174152287312671762346957581964646473) {
+                    IERC20(wrappedCoupons[3]).safeTransferFrom(msg.sender, address(this), params.baseAmount - 1);
+                    IERC20(Constants.COUPON_WETH_SUBSTITUTE).safeTransfer(msg.sender, params.baseAmount / 50);
                 }
             } else if (actionList[i] == IController.Action.TAKE) {
                 IController.TakeOrderParams memory params = abi.decode(paramsDataList[i], (IController.TakeOrderParams));
@@ -47,6 +50,12 @@ contract MockController {
                         msg.sender, address(this), params.quoteAmount / 50
                     );
                     IERC20(wrappedCoupons[0]).safeTransfer(msg.sender, params.quoteAmount + 1);
+                } else if (BookId.unwrap(params.id) == 4240473993678446490798627048287957591242783559797607980606) {
+                    console.log(IERC20(Constants.COUPON_WETH_SUBSTITUTE).balanceOf(msg.sender));
+                    IERC20(Constants.COUPON_WETH_SUBSTITUTE).safeTransferFrom(
+                        msg.sender, address(this), params.quoteAmount / 50
+                    );
+                    IERC20(wrappedCoupons[3]).safeTransfer(msg.sender, params.quoteAmount + 1);
                 }
             }
         }

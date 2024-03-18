@@ -136,6 +136,7 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         }
 
         if (interestThreshold > 0) {
+            _ensureBalance(token, user, 0);
             IERC20(token).approve(address(_cloberController), uint256(interestThreshold));
         }
         _cloberController.execute(
