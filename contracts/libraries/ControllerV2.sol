@@ -79,11 +79,6 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         }
     }
 
-    modifier wrapETH() {
-        if (address(this).balance > 0) _weth.deposit{value: address(this).balance}();
-        _;
-    }
-
     function _executeCouponTrade(
         address user,
         address token,
