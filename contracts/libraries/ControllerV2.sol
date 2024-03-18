@@ -222,6 +222,7 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         if (
             _bookManager.getBookKey(sellMarketBookId).unit != sellBookKey.unit
                 || _bookManager.getBookKey(buyMarketBookId).unit != buyBookKey.unit
+                || Currency.unwrap(sellBookKey.base) != wrappedCoupon || Currency.unwrap(buyBookKey.quote) != wrappedCoupon
         ) {
             revert InvalidMarket();
         }
