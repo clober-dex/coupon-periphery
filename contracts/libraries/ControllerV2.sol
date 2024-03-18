@@ -94,7 +94,8 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         uint256 length = couponsToBurn.length + couponsToMint.length;
         IController.Action[] memory actionList = new IController.Action[](length);
         bytes[] memory paramsDataList = new bytes[](length);
-        address[] memory tokensToSettle = new address[](length);
+        address[] memory tokensToSettle = new address[](length + 1);
+        tokensToSettle[length] = token;
         IController.ERC20PermitParams[] memory erc20PermitParamsList;
         IController.ERC721PermitParams[] memory erc721PermitParamsList;
 
@@ -105,7 +106,7 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         for (uint256 i = 0; i < length; ++i) {
             actionList[i] = IController.Action.TAKE;
             IBookManager.BookKey memory key = _couponBuyMarkets[couponsToBurn[i].key.toId()];
-            quote = Currency.unwrap(key.quote);
+            tokensToSettle[i] = Currency.unwrap(key.base);
             amount += couponsToBurn[i].amount;
             paramsDataList[i] = abi.encode(
                 IController.TakeOrderParams({
@@ -116,12 +117,13 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
                 })
             );
         }
-        if (quote != address(0)) IERC20(quote).approve(address(_cloberController), amount);
+        if (amount > 0) IERC20(token).approve(address(_cloberController), amount);
 
         length = couponsToMint.length;
         for (uint256 i = 0; i < length; ++i) {
             actionList[couponsToBurn.length + i] = IController.Action.SPEND;
             IBookManager.BookKey memory key = _couponSellMarkets[couponsToMint[i].key.toId()];
+            tokensToSettle[couponsToBurn.length + i] = Currency.unwrap(key.base);
             amount = couponsToMint[i].amount;
             paramsDataList[couponsToBurn.length + i] = abi.encode(
                 IController.SpendOrderParams({
