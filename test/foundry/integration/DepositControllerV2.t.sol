@@ -206,18 +206,6 @@ contract DepositControllerV2IntegrationTest is Test, ERC1155Holder {
         depositController.deposit(wausdc, amount, EpochLibrary.current(), int256(amount * 4 / 100), permitParams);
     }
 
-    //    function testDepositOverCloberMarket() public {
-    //        uint256 amount = usdc.amount(7000);
-    //
-    //        ERC20PermitParams memory permitParams =
-    //            vm.signPermit(1, IERC20Permit(Constants.USDC), address(depositController), amount);
-    //        vm.prank(user);
-    //        depositController.deposit(wausdc, amount, EpochLibrary.current().add(1), 0, permitParams);
-    //
-    //        assertEq(couponManager.balanceOf(user, couponKeys[0].toId()), 1995445908, "COUPON0_BALANCE");
-    //        assertEq(couponManager.balanceOf(user, couponKeys[1].toId()), 1995445908, "COUPON0_BALANCE");
-    //    }
-    //
     function testDepositNative() public {
         vm.startPrank(user);
         uint256 amount = 10 ether;
