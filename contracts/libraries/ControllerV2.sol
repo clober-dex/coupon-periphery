@@ -136,6 +136,8 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
             _ensureBalance(token, user, 0);
             IERC20(token).approve(address(_cloberController), uint256(interestThreshold));
         }
+
+        uint256 beforeBalance = IERC20(token).balanceOf(address(this));
         _cloberController.execute(
             actionList,
             paramsDataList,
@@ -144,7 +146,10 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
             erc721PermitParamsList,
             uint64(block.timestamp)
         );
-        if (interestThreshold < 0 && IERC20(token).balanceOf(address(this)) < uint256(-interestThreshold)) {
+        if (
+            interestThreshold < 0
+                && IERC20(token).balanceOf(address(this)) < beforeBalance + uint256(-interestThreshold)
+        ) {
             revert ControllerSlippage();
         }
     }
