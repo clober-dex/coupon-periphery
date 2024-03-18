@@ -93,8 +93,10 @@ contract DepositControllerV2IntegrationTest is Test, ERC1155Holder {
         // create wrapped1155
         couponKeys.push(CouponKey({asset: wausdc, epoch: EpochLibrary.current()}));
         couponKeys.push(CouponKey({asset: waweth, epoch: EpochLibrary.current()}));
+        couponKeys.push(CouponKey({asset: wausdc, epoch: EpochLibrary.current().add(1)}));
+        couponKeys.push(CouponKey({asset: waweth, epoch: EpochLibrary.current().add(1)}));
 
-        for (uint256 i = 0; i < 2; i++) {
+        for (uint256 i = 0; i < 4; i++) {
             address wrappedToken = wrapped1155Factory.requireWrapped1155(
                 address(couponManager),
                 couponKeys[i].toId(),
@@ -117,74 +119,42 @@ contract DepositControllerV2IntegrationTest is Test, ERC1155Holder {
         IERC20(wausdc).transfer(address(cloberController), IERC20(wausdc).amount(500));
         IERC20(waweth).transfer(address(cloberController), IERC20(waweth).amount(500));
 
-        CouponKey memory key = couponKeys[0];
-        uint256 amount = IERC20(wrappedCoupons[0]).amount(100);
-        Coupon[] memory coupons = Utils.toArr(Coupon(key, amount));
-        vm.prank(Constants.COUPON_LOAN_POSITION_MANAGER);
-        couponManager.mintBatch(address(this), coupons, "");
-        couponManager.safeBatchTransferFrom(
-            address(this),
-            address(wrapped1155Factory),
-            coupons,
-            Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKeys[0])
-        );
-        IERC20(wrappedCoupons[0]).transfer(
-            address(cloberController), IERC20(wrappedCoupons[0]).balanceOf(address(this))
-        );
+        for (uint256 i = 0; i < 4; i++) {
+            CouponKey memory key = couponKeys[i];
+            uint256 amount = IERC20(wrappedCoupons[i]).amount(100);
+            Coupon[] memory coupons = Utils.toArr(Coupon(key, amount));
+            vm.prank(Constants.COUPON_LOAN_POSITION_MANAGER);
+            couponManager.mintBatch(address(this), coupons, "");
+            couponManager.safeBatchTransferFrom(
+                address(this),
+                address(wrapped1155Factory),
+                coupons,
+                Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKeys[i])
+            );
+            IERC20(wrappedCoupons[i]).transfer(
+                address(cloberController), IERC20(wrappedCoupons[i]).balanceOf(address(this))
+            );
 
-        key = couponKeys[1];
-        amount = IERC20(wrappedCoupons[1]).amount(100);
-        coupons = Utils.toArr(Coupon(key, amount));
-        vm.prank(Constants.COUPON_LOAN_POSITION_MANAGER);
-        couponManager.mintBatch(address(this), coupons, "");
-        couponManager.safeBatchTransferFrom(
-            address(this),
-            address(wrapped1155Factory),
-            coupons,
-            Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKeys[1])
-        );
-        IERC20(wrappedCoupons[1]).transfer(
-            address(cloberController), IERC20(wrappedCoupons[1]).balanceOf(address(this))
-        );
+            IHooks hooks;
+            IBookManager.BookKey memory sellBookKey = IBookManager.BookKey({
+                base: Currency.wrap(wrappedCoupons[i]),
+                unit: 10 ** 6,
+                quote: Currency.wrap(i % 2 == 0 ? wausdc : waweth),
+                makerPolicy: FeePolicyLibrary.encode(true, -100),
+                hooks: hooks,
+                takerPolicy: FeePolicyLibrary.encode(true, -100)
+            });
+            IBookManager.BookKey memory buyBookKey = IBookManager.BookKey({
+                base: Currency.wrap(i % 2 == 0 ? wausdc : waweth),
+                unit: 10 ** 6,
+                quote: Currency.wrap(wrappedCoupons[i]),
+                makerPolicy: FeePolicyLibrary.encode(true, -100),
+                hooks: hooks,
+                takerPolicy: FeePolicyLibrary.encode(true, -100)
+            });
 
-        IHooks hooks;
-        IBookManager.BookKey memory sellBookKey = IBookManager.BookKey({
-            base: Currency.wrap(wrappedCoupons[0]),
-            unit: 10 ** 6,
-            quote: Currency.wrap(wausdc),
-            makerPolicy: FeePolicyLibrary.encode(true, -100),
-            hooks: hooks,
-            takerPolicy: FeePolicyLibrary.encode(true, -100)
-        });
-        IBookManager.BookKey memory buyBookKey = IBookManager.BookKey({
-            base: Currency.wrap(wausdc),
-            unit: 10 ** 6,
-            quote: Currency.wrap(wrappedCoupons[0]),
-            makerPolicy: FeePolicyLibrary.encode(true, -100),
-            hooks: hooks,
-            takerPolicy: FeePolicyLibrary.encode(true, -100)
-        });
-
-        depositController.setCouponBookKey(couponKeys[0], sellBookKey, buyBookKey);
-
-        sellBookKey = IBookManager.BookKey({
-            base: Currency.wrap(wrappedCoupons[1]),
-            unit: 10 ** 6,
-            quote: Currency.wrap(waweth),
-            makerPolicy: FeePolicyLibrary.encode(true, -100),
-            hooks: hooks,
-            takerPolicy: FeePolicyLibrary.encode(true, -100)
-        });
-        buyBookKey = IBookManager.BookKey({
-            base: Currency.wrap(waweth),
-            unit: 10 ** 6,
-            quote: Currency.wrap(wrappedCoupons[1]),
-            makerPolicy: FeePolicyLibrary.encode(true, -100),
-            hooks: hooks,
-            takerPolicy: FeePolicyLibrary.encode(true, -100)
-        });
-
-        depositController.setCouponBookKey(couponKeys[1], sellBookKey, buyBookKey);
+            depositController.setCouponBookKey(couponKeys[i], sellBookKey, buyBookKey);
+        }
     }
 
     function _checkWrappedTokenAlmost0Balance(address who) internal {
@@ -248,87 +218,86 @@ contract DepositControllerV2IntegrationTest is Test, ERC1155Holder {
     //        assertEq(couponManager.balanceOf(user, couponKeys[1].toId()), 1995445908, "COUPON0_BALANCE");
     //    }
     //
-    //    function testDepositNative() public {
-    //        vm.startPrank(user);
-    //        uint256 amount = 10 ether;
-    //
-    //        uint256 beforeBalance = user.balance;
-    //
-    //        uint256 tokenId = bondPositionManager.nextId();
-    //        depositController.deposit{value: amount}(
-    //            waweth, amount, EpochLibrary.current().add(1), 0, emptyERC20PermitParams
-    //        );
-    //
-    //        BondPosition memory position = bondPositionManager.getPosition(tokenId);
-    //
-    //        assertEq(bondPositionManager.ownerOf(tokenId), user, "POSITION_OWNER");
-    //        assertGt(user.balance, beforeBalance - amount, "NATIVE_BALANCE");
-    //        console.log("diff", user.balance - (beforeBalance - amount));
-    //        assertEq(position.asset, waweth, "POSITION_ASSET");
-    //        assertEq(position.amount, amount, "POSITION_AMOUNT");
-    //        assertEq(position.expiredWith, EpochLibrary.current().add(1), "POSITION_EXPIRED_WITH");
-    //        assertEq(position.nonce, 0, "POSITION_NONCE");
-    //        _checkWrappedTokenAlmost0Balance(address(depositController));
-    //
-    //        vm.stopPrank();
-    //    }
-    //
-    //    function testWithdraw() public {
-    //        vm.startPrank(user);
-    //        uint256 amount = usdc.amount(10);
-    //        uint256 tokenId = bondPositionManager.nextId();
-    //        depositController.deposit(
-    //            wausdc,
-    //            amount,
-    //            EpochLibrary.current().add(1),
-    //            0,
-    //            vm.signPermit(1, IERC20Permit(Constants.USDC), address(depositController), amount)
-    //        );
-    //
-    //        BondPosition memory beforePosition = bondPositionManager.getPosition(tokenId);
-    //        uint256 beforeBalance = usdc.balanceOf(user);
-    //
-    //        depositController.adjust(
-    //            tokenId,
-    //            amount / 2,
-    //            beforePosition.expiredWith,
-    //            type(int256).max,
-    //            emptyERC20PermitParams,
-    //            vm.signPermit(1, bondPositionManager, address(depositController), tokenId)
-    //        );
-    //
-    //        BondPosition memory afterPosition = bondPositionManager.getPosition(tokenId);
-    //
-    //        assertEq(bondPositionManager.ownerOf(tokenId), user, "POSITION_OWNER_0");
-    //        assertLt(usdc.balanceOf(user), beforeBalance + amount / 2, "USDC_BALANCE_0");
-    //        console.log("diff", beforeBalance + amount / 2 - usdc.balanceOf(user));
-    //        assertEq(afterPosition.asset, wausdc, "POSITION_ASSET_0");
-    //        assertEq(afterPosition.amount, beforePosition.amount - amount / 2, "POSITION_AMOUNT_0");
-    //        assertEq(afterPosition.expiredWith, beforePosition.expiredWith, "POSITION_EXPIRED_WITH_0");
-    //        assertEq(afterPosition.nonce, beforePosition.nonce + 1, "POSITION_NONCE_0");
-    //
-    //        beforeBalance = usdc.balanceOf(user);
-    //        beforePosition = afterPosition;
-    //
-    //        depositController.adjust(
-    //            tokenId, 0, beforePosition.expiredWith, type(int256).max, emptyERC20PermitParams, emptyERC721PermitParams
-    //        );
-    //
-    //        afterPosition = bondPositionManager.getPosition(tokenId);
-    //
-    //        vm.expectRevert("ERC721: invalid token ID");
-    //        bondPositionManager.ownerOf(tokenId);
-    //        assertLt(usdc.balanceOf(user), beforeBalance + beforePosition.amount, "USDC_BALANCE_1");
-    //        console.log("diff", beforeBalance + beforePosition.amount - usdc.balanceOf(user));
-    //        assertEq(afterPosition.asset, wausdc, "POSITION_ASSET_1");
-    //        assertEq(afterPosition.amount, 0, "POSITION_AMOUNT_1");
-    //        assertEq(afterPosition.expiredWith, EpochLibrary.lastExpiredEpoch(), "POSITION_EXPIRED_WITH_1");
-    //        assertEq(afterPosition.nonce, beforePosition.nonce, "POSITION_NONCE_1");
-    //        _checkWrappedTokenAlmost0Balance(address(depositController));
-    //
-    //        vm.stopPrank();
-    //    }
-    //
+    function testDepositNative() public {
+        vm.startPrank(user);
+        uint256 amount = 10 ether;
+
+        uint256 beforeBalance = user.balance;
+
+        uint256 tokenId = bondPositionManager.nextId();
+        depositController.deposit{value: amount}(waweth, amount, EpochLibrary.current(), 0, emptyERC20PermitParams);
+
+        BondPosition memory position = bondPositionManager.getPosition(tokenId);
+
+        assertEq(bondPositionManager.ownerOf(tokenId), user, "POSITION_OWNER");
+        assertGt(user.balance, beforeBalance - amount, "NATIVE_BALANCE");
+        console.log("diff", user.balance - (beforeBalance - amount));
+        assertEq(position.asset, waweth, "POSITION_ASSET");
+        assertEq(position.amount, amount, "POSITION_AMOUNT");
+        assertEq(position.expiredWith, EpochLibrary.current(), "POSITION_EXPIRED_WITH");
+        assertEq(position.nonce, 0, "POSITION_NONCE");
+        _checkWrappedTokenAlmost0Balance(address(depositController));
+
+        vm.stopPrank();
+    }
+
+    function testWithdraw() public {
+        vm.startPrank(user);
+        uint256 amount = usdc.amount(10);
+        uint256 tokenId = bondPositionManager.nextId();
+        depositController.deposit(
+            wausdc,
+            amount,
+            EpochLibrary.current(),
+            0,
+            vm.signPermit(1, IERC20Permit(Constants.USDC), address(depositController), amount)
+        );
+
+        BondPosition memory beforePosition = bondPositionManager.getPosition(tokenId);
+        uint256 beforeBalance = usdc.balanceOf(user);
+
+        console.log("---------");
+        depositController.adjust(
+            tokenId,
+            amount / 2,
+            beforePosition.expiredWith,
+            type(int256).max,
+            emptyERC20PermitParams,
+            vm.signPermit(1, bondPositionManager, address(depositController), tokenId)
+        );
+
+        BondPosition memory afterPosition = bondPositionManager.getPosition(tokenId);
+
+        assertEq(bondPositionManager.ownerOf(tokenId), user, "POSITION_OWNER_0");
+        assertLt(usdc.balanceOf(user), beforeBalance + amount / 2, "USDC_BALANCE_0");
+        console.log("diff", beforeBalance + amount / 2 - usdc.balanceOf(user));
+        assertEq(afterPosition.asset, wausdc, "POSITION_ASSET_0");
+        assertEq(afterPosition.amount, beforePosition.amount - amount / 2, "POSITION_AMOUNT_0");
+        assertEq(afterPosition.expiredWith, beforePosition.expiredWith, "POSITION_EXPIRED_WITH_0");
+        assertEq(afterPosition.nonce, beforePosition.nonce + 1, "POSITION_NONCE_0");
+
+        beforeBalance = usdc.balanceOf(user);
+        beforePosition = afterPosition;
+
+        depositController.adjust(
+            tokenId, 0, beforePosition.expiredWith, type(int256).max, emptyERC20PermitParams, emptyERC721PermitParams
+        );
+
+        afterPosition = bondPositionManager.getPosition(tokenId);
+
+        vm.expectRevert("ERC721: invalid token ID");
+        bondPositionManager.ownerOf(tokenId);
+        assertLt(usdc.balanceOf(user), beforeBalance + beforePosition.amount, "USDC_BALANCE_1");
+        console.log("diff", beforeBalance + beforePosition.amount - usdc.balanceOf(user));
+        assertEq(afterPosition.asset, wausdc, "POSITION_ASSET_1");
+        assertEq(afterPosition.amount, 0, "POSITION_AMOUNT_1");
+        assertEq(afterPosition.expiredWith, EpochLibrary.lastExpiredEpoch(), "POSITION_EXPIRED_WITH_1");
+        assertEq(afterPosition.nonce, beforePosition.nonce, "POSITION_NONCE_1");
+        _checkWrappedTokenAlmost0Balance(address(depositController));
+
+        vm.stopPrank();
+    }
+
     //    function testWithdrawMaxMinusOne() public {
     //        vm.startPrank(user);
     //        uint256 amount = usdc.amount(10);
@@ -365,127 +334,127 @@ contract DepositControllerV2IntegrationTest is Test, ERC1155Holder {
     //        vm.stopPrank();
     //    }
     //
-    //    function testWithdrawNative() public {
-    //        vm.startPrank(user);
-    //        uint256 amount = 10 ether;
-    //        uint256 tokenId = bondPositionManager.nextId();
-    //        depositController.deposit{value: amount}(
-    //            waweth, amount, EpochLibrary.current().add(1), 0, emptyERC20PermitParams
-    //        );
-    //
-    //        BondPosition memory beforePosition = bondPositionManager.getPosition(tokenId);
-    //        uint256 beforeBalance = user.balance;
-    //
-    //        depositController.adjust(
-    //            tokenId,
-    //            amount / 2,
-    //            beforePosition.expiredWith,
-    //            type(int256).max,
-    //            emptyERC20PermitParams,
-    //            vm.signPermit(1, bondPositionManager, address(depositController), tokenId)
-    //        );
-    //
-    //        BondPosition memory afterPosition = bondPositionManager.getPosition(tokenId);
-    //
-    //        assertEq(bondPositionManager.ownerOf(tokenId), user, "POSITION_OWNER");
-    //        assertLt(user.balance, beforeBalance + amount / 2, "NATIVE_BALANCE");
-    //        console.log("diff", beforeBalance + amount / 2 - user.balance);
-    //        assertEq(afterPosition.asset, waweth, "POSITION_ASSET");
-    //        assertEq(afterPosition.amount, beforePosition.amount - amount / 2, "POSITION_AMOUNT");
-    //        assertEq(afterPosition.expiredWith, beforePosition.expiredWith, "POSITION_EXPIRED_WITH");
-    //        assertEq(afterPosition.nonce, beforePosition.nonce + 1, "POSITION_NONCE");
-    //
-    //        beforeBalance = user.balance;
-    //        beforePosition = afterPosition;
-    //
-    //        depositController.adjust(
-    //            tokenId, 0, beforePosition.expiredWith, type(int256).max, emptyERC20PermitParams, emptyERC721PermitParams
-    //        );
-    //
-    //        afterPosition = bondPositionManager.getPosition(tokenId);
-    //
-    //        vm.expectRevert("ERC721: invalid token ID");
-    //        bondPositionManager.ownerOf(tokenId);
-    //        assertLt(user.balance, beforeBalance + beforePosition.amount, "NATIVE_BALANCE_1");
-    //        console.log("diff", beforeBalance + beforePosition.amount - user.balance);
-    //        assertEq(afterPosition.asset, waweth, "POSITION_ASSET_1");
-    //        assertEq(afterPosition.amount, 0, "POSITION_AMOUNT_1");
-    //        assertEq(afterPosition.expiredWith, EpochLibrary.lastExpiredEpoch(), "POSITION_EXPIRED_WITH_1");
-    //        assertEq(afterPosition.nonce, beforePosition.nonce, "POSITION_NONCE_1");
-    //        _checkWrappedTokenAlmost0Balance(address(depositController));
-    //
-    //        vm.stopPrank();
-    //    }
-    //
-    //    function testCollect() public {
-    //        vm.startPrank(user);
-    //        uint256 amount = usdc.amount(10);
-    //        uint256 tokenId = bondPositionManager.nextId();
-    //        depositController.deposit(
-    //            wausdc,
-    //            amount,
-    //            EpochLibrary.current(),
-    //            0,
-    //            vm.signPermit(1, IERC20Permit(Constants.USDC), address(depositController), amount)
-    //        );
-    //        vm.warp(EpochLibrary.current().add(1).startTime());
-    //
-    //        BondPosition memory beforePosition = bondPositionManager.getPosition(tokenId);
-    //        uint256 beforeBalance = usdc.balanceOf(user);
-    //
-    //        depositController.adjust(
-    //            tokenId,
-    //            0,
-    //            beforePosition.expiredWith,
-    //            0,
-    //            emptyERC20PermitParams,
-    //            vm.signPermit(1, bondPositionManager, address(depositController), tokenId)
-    //        );
-    //
-    //        BondPosition memory afterPosition = bondPositionManager.getPosition(tokenId);
-    //
-    //        vm.expectRevert("ERC721: invalid token ID");
-    //        bondPositionManager.ownerOf(tokenId);
-    //        assertEq(usdc.balanceOf(user), beforeBalance + beforePosition.amount, "USDC_BALANCE");
-    //        assertEq(afterPosition.asset, wausdc, "POSITION_ASSET");
-    //        assertEq(afterPosition.amount, 0, "POSITION_AMOUNT");
-    //        assertEq(afterPosition.expiredWith, EpochLibrary.lastExpiredEpoch(), "POSITION_EXPIRED_WITH");
-    //        assertEq(afterPosition.nonce, beforePosition.nonce + 1, "POSITION_NONCE");
-    //
-    //        vm.stopPrank();
-    //    }
-    //
-    //    function testCollectNative() public {
-    //        vm.startPrank(user);
-    //        uint256 amount = 10 ether;
-    //        uint256 tokenId = bondPositionManager.nextId();
-    //        depositController.deposit{value: amount}(waweth, amount, EpochLibrary.current(), 0, emptyERC20PermitParams);
-    //        vm.warp(EpochLibrary.current().add(1).startTime());
-    //
-    //        BondPosition memory beforePosition = bondPositionManager.getPosition(tokenId);
-    //        uint256 beforeBalance = user.balance;
-    //
-    //        depositController.adjust(
-    //            tokenId,
-    //            0,
-    //            beforePosition.expiredWith,
-    //            0,
-    //            emptyERC20PermitParams,
-    //            vm.signPermit(1, bondPositionManager, address(depositController), tokenId)
-    //        );
-    //
-    //        BondPosition memory afterPosition = bondPositionManager.getPosition(tokenId);
-    //
-    //        vm.expectRevert("ERC721: invalid token ID");
-    //        bondPositionManager.ownerOf(tokenId);
-    //        assertEq(user.balance, beforeBalance + beforePosition.amount, "NATIVE_BALANCE");
-    //        assertEq(afterPosition.asset, waweth, "POSITION_ASSET");
-    //        assertEq(afterPosition.amount, 0, "POSITION_AMOUNT");
-    //        assertEq(afterPosition.expiredWith, EpochLibrary.lastExpiredEpoch(), "POSITION_EXPIRED_WITH");
-    //        assertEq(afterPosition.nonce, beforePosition.nonce + 1, "POSITION_NONCE");
-    //
-    //        vm.stopPrank();
-    //    }
+    function testWithdrawNative() public {
+        vm.startPrank(user);
+        uint256 amount = 10 ether;
+        uint256 tokenId = bondPositionManager.nextId();
+        depositController.deposit{value: amount}(
+            waweth, amount, EpochLibrary.current().add(1), 0, emptyERC20PermitParams
+        );
+
+        BondPosition memory beforePosition = bondPositionManager.getPosition(tokenId);
+        uint256 beforeBalance = user.balance;
+
+        depositController.adjust(
+            tokenId,
+            amount / 2,
+            beforePosition.expiredWith,
+            type(int256).max,
+            emptyERC20PermitParams,
+            vm.signPermit(1, bondPositionManager, address(depositController), tokenId)
+        );
+
+        BondPosition memory afterPosition = bondPositionManager.getPosition(tokenId);
+
+        assertEq(bondPositionManager.ownerOf(tokenId), user, "POSITION_OWNER");
+        assertLt(user.balance, beforeBalance + amount / 2, "NATIVE_BALANCE");
+        console.log("diff", beforeBalance + amount / 2 - user.balance);
+        assertEq(afterPosition.asset, waweth, "POSITION_ASSET");
+        assertEq(afterPosition.amount, beforePosition.amount - amount / 2, "POSITION_AMOUNT");
+        assertEq(afterPosition.expiredWith, beforePosition.expiredWith, "POSITION_EXPIRED_WITH");
+        assertEq(afterPosition.nonce, beforePosition.nonce + 1, "POSITION_NONCE");
+
+        beforeBalance = user.balance;
+        beforePosition = afterPosition;
+
+        depositController.adjust(
+            tokenId, 0, beforePosition.expiredWith, type(int256).max, emptyERC20PermitParams, emptyERC721PermitParams
+        );
+
+        afterPosition = bondPositionManager.getPosition(tokenId);
+
+        vm.expectRevert("ERC721: invalid token ID");
+        bondPositionManager.ownerOf(tokenId);
+        assertLt(user.balance, beforeBalance + beforePosition.amount, "NATIVE_BALANCE_1");
+        console.log("diff", beforeBalance + beforePosition.amount - user.balance);
+        assertEq(afterPosition.asset, waweth, "POSITION_ASSET_1");
+        assertEq(afterPosition.amount, 0, "POSITION_AMOUNT_1");
+        assertEq(afterPosition.expiredWith, EpochLibrary.lastExpiredEpoch(), "POSITION_EXPIRED_WITH_1");
+        assertEq(afterPosition.nonce, beforePosition.nonce, "POSITION_NONCE_1");
+        _checkWrappedTokenAlmost0Balance(address(depositController));
+
+        vm.stopPrank();
+    }
+
+    function testCollect() public {
+        vm.startPrank(user);
+        uint256 amount = usdc.amount(10);
+        uint256 tokenId = bondPositionManager.nextId();
+        depositController.deposit(
+            wausdc,
+            amount,
+            EpochLibrary.current(),
+            0,
+            vm.signPermit(1, IERC20Permit(Constants.USDC), address(depositController), amount)
+        );
+        vm.warp(EpochLibrary.current().add(1).startTime());
+
+        BondPosition memory beforePosition = bondPositionManager.getPosition(tokenId);
+        uint256 beforeBalance = usdc.balanceOf(user);
+
+        depositController.adjust(
+            tokenId,
+            0,
+            beforePosition.expiredWith,
+            0,
+            emptyERC20PermitParams,
+            vm.signPermit(1, bondPositionManager, address(depositController), tokenId)
+        );
+
+        BondPosition memory afterPosition = bondPositionManager.getPosition(tokenId);
+
+        vm.expectRevert("ERC721: invalid token ID");
+        bondPositionManager.ownerOf(tokenId);
+        assertEq(usdc.balanceOf(user), beforeBalance + beforePosition.amount, "USDC_BALANCE");
+        assertEq(afterPosition.asset, wausdc, "POSITION_ASSET");
+        assertEq(afterPosition.amount, 0, "POSITION_AMOUNT");
+        assertEq(afterPosition.expiredWith, EpochLibrary.lastExpiredEpoch(), "POSITION_EXPIRED_WITH");
+        assertEq(afterPosition.nonce, beforePosition.nonce + 1, "POSITION_NONCE");
+
+        vm.stopPrank();
+    }
+
+    function testCollectNative() public {
+        vm.startPrank(user);
+        uint256 amount = 10 ether;
+        uint256 tokenId = bondPositionManager.nextId();
+        depositController.deposit{value: amount}(waweth, amount, EpochLibrary.current(), 0, emptyERC20PermitParams);
+        vm.warp(EpochLibrary.current().add(1).startTime());
+
+        BondPosition memory beforePosition = bondPositionManager.getPosition(tokenId);
+        uint256 beforeBalance = user.balance;
+
+        depositController.adjust(
+            tokenId,
+            0,
+            beforePosition.expiredWith,
+            0,
+            emptyERC20PermitParams,
+            vm.signPermit(1, bondPositionManager, address(depositController), tokenId)
+        );
+
+        BondPosition memory afterPosition = bondPositionManager.getPosition(tokenId);
+
+        vm.expectRevert("ERC721: invalid token ID");
+        bondPositionManager.ownerOf(tokenId);
+        assertEq(user.balance, beforeBalance + beforePosition.amount, "NATIVE_BALANCE");
+        assertEq(afterPosition.asset, waweth, "POSITION_ASSET");
+        assertEq(afterPosition.amount, 0, "POSITION_AMOUNT");
+        assertEq(afterPosition.expiredWith, EpochLibrary.lastExpiredEpoch(), "POSITION_EXPIRED_WITH");
+        assertEq(afterPosition.nonce, beforePosition.nonce + 1, "POSITION_NONCE");
+
+        vm.stopPrank();
+    }
 
     function assertEq(Epoch e1, Epoch e2, string memory err) internal {
         assertEq(Epoch.unwrap(e1), Epoch.unwrap(e2), err);
