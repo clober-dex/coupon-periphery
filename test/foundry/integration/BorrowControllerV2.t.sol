@@ -344,6 +344,7 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
         uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 1 ether, 1);
 
         uint256 beforeUSDCBalance = usdc.balanceOf(user);
+        uint256 beforeWETHBalance = weth.balanceOf(user);
         uint256 beforeETHBalance = user.balance;
         LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
         uint16 epochs = 1;
@@ -353,6 +354,7 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
 
         IBorrowControllerV2.SwapParams memory swapParams;
         vm.startPrank(user);
+        console.log(maxPayInterest);
         weth.approve(address(borrowController), maxPayInterest);
         borrowController.adjust{value: maxPayInterest}(
             positionId,
@@ -369,8 +371,16 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
         LoanPosition memory afterLoanPosition = loanPositionManager.getPosition(positionId);
 
         assertEq(usdc.balanceOf(user), beforeUSDCBalance, "USDC_BALANCE");
-        assertGe(user.balance, beforeETHBalance - maxPayInterest, "NATIVE_BALANCE_GE");
-        assertLe(user.balance, beforeETHBalance + 0.01 ether - maxPayInterest, "NATIVE_BALANCE_LE");
+        assertGe(
+            user.balance + weth.balanceOf(user) - beforeWETHBalance,
+            beforeETHBalance - maxPayInterest,
+            "NATIVE_BALANCE_GE"
+        );
+        assertLe(
+            user.balance + weth.balanceOf(user) - beforeWETHBalance,
+            beforeETHBalance - maxPayInterest,
+            "NATIVE_BALANCE_LE"
+        );
         assertEq(beforeLoanPosition.expiredWith.add(epochs), afterLoanPosition.expiredWith, "POSITION_EXPIRE_EPOCH");
         assertEq(beforeLoanPosition.collateralAmount, afterLoanPosition.collateralAmount, "POSITION_COLLATERAL_AMOUNT");
         assertEq(beforeLoanPosition.debtAmount, afterLoanPosition.debtAmount, "POSITION_DEBT_AMOUNT");

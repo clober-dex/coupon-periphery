@@ -10,6 +10,7 @@ import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {CloberMarketSwapCallbackReceiver} from "../external/clober/CloberMarketSwapCallbackReceiver.sol";
 import {IWETH9} from "../external/weth/IWETH9.sol";
@@ -133,7 +134,7 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         }
 
         if (interestThreshold > 0) {
-            _ensureBalance(token, user, 0);
+            if (IERC20(token).balanceOf(address(this)) < uint256(interestThreshold)) _takeMaxToken(token, user);
             IERC20(token).approve(address(_cloberController), uint256(interestThreshold));
         }
 
@@ -162,6 +163,18 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         uint256 leftAmount = IERC20(substitute).balanceOf(address(this));
         if (leftAmount == 0) return;
         ISubstitute(substitute).burn(leftAmount, to);
+    }
+
+    function _takeMaxToken(address token, address user) internal {
+        address underlyingToken = ISubstitute(token).underlyingToken();
+        uint256 amount =
+            Math.min(IERC20(underlyingToken).allowance(user, address(this)), IERC20(underlyingToken).balanceOf(user));
+        if (amount > 0) IERC20(underlyingToken).safeTransferFrom(user, address(this), amount);
+        uint256 underlyingBalance = IERC20(underlyingToken).balanceOf(address(this));
+        if (underlyingBalance > 0) {
+            IERC20(underlyingToken).approve(token, underlyingBalance);
+            ISubstitute(token).mint(underlyingBalance, address(this));
+        }
     }
 
     function _ensureBalance(address token, address user, uint256 amount) internal {
