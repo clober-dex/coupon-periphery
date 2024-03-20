@@ -7,7 +7,13 @@ import {ERC20PermitParams, PermitSignature} from "../libraries/PermitParams.sol"
 import {Epoch} from "../libraries/Epoch.sol";
 
 interface IBorrowControllerV2 is IControllerV2 {
-    event SwapToken(address indexed inToken, address indexed outToken, uint256 inAmount, uint256 outAmount);
+    event SwapToken(
+        uint256 indexed positionId,
+        address indexed inToken,
+        address indexed outToken,
+        uint256 inAmount,
+        uint256 outAmount
+    );
 
     struct SwapParams {
         address inSubstitute;
