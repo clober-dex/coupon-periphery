@@ -153,6 +153,7 @@ contract BorrowControllerV2 is IBorrowControllerV2, ControllerV2, IPositionLocke
     {
         address inToken = ISubstitute(inSubstitute).underlyingToken();
         address outToken = ISubstitute(outSubstitute).underlyingToken();
+        uint256 beforeOutTokenBalance = IERC20(outToken).balanceOf(address(this));
 
         ISubstitute(inSubstitute).burn(inAmount, address(this));
         if (inToken == address(_weth)) _weth.deposit{value: inAmount}();
@@ -161,7 +162,10 @@ contract BorrowControllerV2 is IBorrowControllerV2, ControllerV2, IPositionLocke
         if (!success) revert CollateralSwapFailed(string(result));
         IERC20(inToken).approve(_router, 0);
 
-        outAmount = IERC20(outToken).balanceOf(address(this));
+        unchecked {
+            outAmount = IERC20(outToken).balanceOf(address(this)) - beforeOutTokenBalance;
+        }
+        emit SwapToken(inToken, outToken, inAmount, outAmount);
 
         IERC20(outToken).approve(outSubstitute, outAmount);
         ISubstitute(outSubstitute).mint(outAmount, address(this));
