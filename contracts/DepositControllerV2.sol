@@ -66,7 +66,7 @@ contract DepositControllerV2 is IDepositControllerV2, ControllerV2, IPositionLoc
         _executeCouponTrade(user, position.asset, couponsToMint, couponsToBurn, interestThreshold);
 
         if (amountDelta > 0) {
-            _ensureBalance(position.asset, user, uint256(amountDelta));
+            _mintSubstituteAll(position.asset, user, uint256(amountDelta));
             IERC20(position.asset).approve(address(_bondPositionManager), uint256(amountDelta));
             _bondPositionManager.depositToken(position.asset, uint256(amountDelta));
         }

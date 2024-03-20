@@ -88,7 +88,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         );
 
         if (collateralDelta > 0) {
-            _ensureBalance(position.collateralToken, user, uint256(collateralDelta));
+            _mintSubstituteAll(position.collateralToken, user, uint256(collateralDelta));
             IERC20(position.collateralToken).approve(address(_loanPositionManager), uint256(collateralDelta));
             _loanPositionManager.depositToken(position.collateralToken, uint256(collateralDelta));
         }
