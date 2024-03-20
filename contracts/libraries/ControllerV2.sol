@@ -146,12 +146,19 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
             erc721PermitParamsList,
             uint64(block.timestamp)
         );
-        if (
-            interestThreshold < 0
-                && IERC20(token).balanceOf(address(this)) < beforeBalance + uint256(-interestThreshold)
-        ) {
+        uint256 afterBalance = IERC20(token).balanceOf(address(this));
+        int256 balanceDiff;
+        unchecked {
+            if (afterBalance > beforeBalance) {
+                balanceDiff = -(afterBalance - beforeBalance).toInt256();
+            } else {
+                balanceDiff = (beforeBalance - afterBalance).toInt256();
+            }
+        }
+        if (interestThreshold < balanceDiff) {
             revert ControllerSlippage();
         }
+        emit CouponTrade(-balanceDiff, couponsToBurn, couponsToMint);
     }
 
     function _getUnderlyingToken(address substitute) internal view returns (address) {
