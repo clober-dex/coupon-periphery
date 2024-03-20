@@ -82,12 +82,12 @@ contract BorrowControllerV2 is IBorrowControllerV2, ControllerV2, IPositionLocke
         _executeCouponTrade(user, position.debtToken, couponsToMint, couponsToBurn, interestThreshold);
 
         if (collateralDelta > 0) {
-            _ensureBalance(position.collateralToken, user, uint256(collateralDelta));
+            _mintSubstituteAll(position.collateralToken, user, uint256(collateralDelta));
             IERC20(position.collateralToken).approve(address(_loanPositionManager), uint256(collateralDelta));
             _loanPositionManager.depositToken(position.collateralToken, uint256(collateralDelta));
         }
         if (debtDelta < 0) {
-            _ensureBalance(position.debtToken, user, uint256(-debtDelta));
+            _mintSubstituteAll(position.debtToken, user, uint256(-debtDelta));
             IERC20(position.debtToken).approve(address(_loanPositionManager), uint256(-debtDelta));
             _loanPositionManager.depositToken(position.debtToken, uint256(-debtDelta));
         }

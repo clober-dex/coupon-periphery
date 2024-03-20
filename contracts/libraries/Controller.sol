@@ -23,6 +23,7 @@ import {Wrapped1155MetadataBuilder} from "./Wrapped1155MetadataBuilder.sol";
 import {IERC721Permit} from "../interfaces/IERC721Permit.sol";
 import {ISubstitute} from "../interfaces/ISubstitute.sol";
 import {IController} from "../interfaces/IController.sol";
+import {SubstituteLibrary} from "../libraries/Substitute.sol";
 import {ReentrancyGuard} from "./ReentrancyGuard.sol";
 
 import {Epoch} from "./Epoch.sol";
@@ -38,6 +39,7 @@ abstract contract Controller is
     using SafeERC20 for IERC20;
     using CouponKeyLibrary for CouponKey;
     using CouponLibrary for Coupon;
+    using SubstituteLibrary for ISubstitute;
 
     IWrapped1155Factory internal immutable _wrapped1155Factory;
     CloberMarketFactory internal immutable _cloberMarketFactory;
@@ -97,7 +99,7 @@ abstract contract Controller is
             market.marketOrder(address(this), 0, 0, lastCoupon.amount, 2, data);
         } else {
             if (remainingInterest < 0) revert ControllerSlippage();
-            _ensureBalance(token, user, amountToPay);
+            _mintSubstituteAll(token, user, amountToPay);
         }
     }
 
@@ -149,21 +151,8 @@ abstract contract Controller is
         ISubstitute(substitute).burn(leftAmount, to);
     }
 
-    function _ensureBalance(address token, address user, uint256 amount) internal {
-        // TODO: consider to use SubstituteLibrary
-        address underlyingToken = ISubstitute(token).underlyingToken();
-        uint256 thisBalance = IERC20(token).balanceOf(address(this));
-        uint256 underlyingBalance = IERC20(underlyingToken).balanceOf(address(this));
-        if (amount > thisBalance + underlyingBalance) {
-            unchecked {
-                IERC20(underlyingToken).safeTransferFrom(user, address(this), amount - thisBalance - underlyingBalance);
-                underlyingBalance = amount - thisBalance;
-            }
-        }
-        if (underlyingBalance > 0) {
-            IERC20(underlyingToken).approve(token, underlyingBalance);
-            ISubstitute(token).mint(underlyingBalance, address(this));
-        }
+    function _mintSubstituteAll(address token, address user, uint256 minRequired) internal {
+        ISubstitute(token).mintAll(user, minRequired);
     }
 
     function _wrapCoupons(Coupon[] memory coupons) internal {
