@@ -82,6 +82,7 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
 
     function _executeCouponTrade(
         address user,
+        uint256 positionId,
         address token,
         Coupon[] memory couponsToMint,
         Coupon[] memory couponsToBurn,
@@ -94,7 +95,6 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         tokensToSettle[length] = token;
 
         uint256 amount;
-
         length = couponsToBurn.length;
         for (uint256 i = 0; i < length; ++i) {
             actionList[i] = IController.Action.TAKE;
@@ -133,35 +133,42 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         if (interestThreshold > 0) {
             if (IERC20(token).balanceOf(address(this)) < uint256(interestThreshold)) {
                 address underlyingToken = ISubstitute(token).underlyingToken();
-                uint256 minRequired = Math.min(
+                amount = Math.min(
                     IERC20(underlyingToken).allowance(user, address(this)), IERC20(underlyingToken).balanceOf(user)
                 );
-                ISubstitute(token).mintAll(user, Math.min(uint256(interestThreshold), minRequired));
+                ISubstitute(token).mintAll(user, Math.min(uint256(interestThreshold), amount));
             }
             IERC20(token).approve(address(_cloberController), uint256(interestThreshold));
         }
 
         uint256 beforeBalance = IERC20(token).balanceOf(address(this));
+        int256 balanceDiff;
+        unchecked {
+            IController.ERC20PermitParams[] memory erc20PermitParamsList;
+            IController.ERC721PermitParams[] memory erc721PermitParamsList;
+            _cloberController.execute(
+                actionList,
+                paramsDataList,
+                tokensToSettle,
+                erc20PermitParamsList,
+                erc721PermitParamsList,
+                uint64(block.timestamp)
+            );
+            if (interestThreshold > 0) {
+                IERC20(token).approve(address(_cloberController), 0);
+            }
 
-        IController.ERC20PermitParams[] memory erc20PermitParamsList;
-        IController.ERC721PermitParams[] memory erc721PermitParamsList;
-        _cloberController.execute(
-            actionList,
-            paramsDataList,
-            tokensToSettle,
-            erc20PermitParamsList,
-            erc721PermitParamsList,
-            uint64(block.timestamp)
-        );
-        if (interestThreshold > 0) {
-            IERC20(token).approve(address(_cloberController), 0);
+            uint256 afterBalance = IERC20(token).balanceOf(address(this));
+            if (afterBalance > beforeBalance) {
+                balanceDiff = -(afterBalance - beforeBalance).toInt256();
+            } else {
+                balanceDiff = (beforeBalance - afterBalance).toInt256();
+            }
         }
-        if (
-            interestThreshold < 0
-                && IERC20(token).balanceOf(address(this)) < beforeBalance + uint256(-interestThreshold)
-        ) {
+        if (interestThreshold < balanceDiff) {
             revert ControllerSlippage();
         }
+        emit CouponTrade(positionId, balanceDiff, couponsToBurn, couponsToMint);
     }
 
     function _getUnderlyingToken(address substitute) internal view returns (address) {
