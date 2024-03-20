@@ -18,11 +18,12 @@ contract MockController {
     function execute(
         IController.Action[] calldata actionList,
         bytes[] calldata paramsDataList,
-        address[] calldata tokensToSettle,
-        IController.ERC20PermitParams[] calldata erc20PermitParamsList,
-        IController.ERC721PermitParams[] calldata erc721PermitParamsList,
-        uint64 deadline
+        address[] calldata,
+        IController.ERC20PermitParams[] calldata,
+        IController.ERC721PermitParams[] calldata,
+        uint64
     ) external payable returns (OrderId[] memory ids) {
+        ids = new OrderId[](0);
         uint256 length = actionList.length;
         for (uint256 i = 0; i < length; ++i) {
             if (actionList[i] == IController.Action.SPEND) {

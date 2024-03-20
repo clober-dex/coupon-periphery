@@ -30,7 +30,7 @@ import {IWrapped1155Factory} from "../../../contracts/external/wrapped1155/IWrap
 import {IController} from "../../../contracts/external/clober-v2/IController.sol";
 import {IBookManager} from "../../../contracts/external/clober-v2/IBookManager.sol";
 import {IHooks} from "../../../contracts/external/clober-v2/IHooks.sol";
-import {Currency, CurrencyLibrary} from "../../../contracts/external/clober-v2/IBookManager.sol";
+import {Currency, CurrencyLibrary} from "../../../contracts/external/clober-v2/Currency.sol";
 import {FeePolicy, FeePolicyLibrary} from "../../../contracts/external/clober-v2/FeePolicy.sol";
 import {DepositControllerV2} from "../../../contracts/DepositControllerV2.sol";
 import {AaveTokenSubstitute} from "../../../contracts/AaveTokenSubstitute.sol";

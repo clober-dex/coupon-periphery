@@ -1,8 +1,8 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: GPL-2.0-or-later
 
 pragma solidity ^0.8.20;
 
-import "./Math.sol";
+import {Math} from "./Math.sol";
 
 type Tick is int24;
 

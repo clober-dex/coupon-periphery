@@ -96,7 +96,6 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         IController.ERC721PermitParams[] memory erc721PermitParamsList;
 
         uint256 amount;
-        address quote; // all quote is same
 
         length = couponsToBurn.length;
         for (uint256 i = 0; i < length; ++i) {
