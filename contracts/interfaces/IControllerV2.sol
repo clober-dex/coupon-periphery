@@ -8,7 +8,7 @@ import {Coupon} from "../libraries/Coupon.sol";
 
 interface IControllerV2 {
     event SetCouponMarket(address indexed asset, Epoch indexed epoch, BookId sellMarketBookId, BookId buyMarketBookId);
-    event CouponTrade(int256 profit, Coupon[] couponsToBuy, Coupon[] couponsToSell);
+    event CouponTrade(int256 cost, Coupon[] couponsToBuy, Coupon[] couponsToSell);
 
     error InvalidAccess();
     error InvalidMarket();

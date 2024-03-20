@@ -169,7 +169,7 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         if (interestThreshold < balanceDiff) {
             revert ControllerSlippage();
         }
-        emit CouponTrade(-balanceDiff, couponsToBurn, couponsToMint);
+        emit CouponTrade(balanceDiff, couponsToBurn, couponsToMint);
     }
 
     function _getUnderlyingToken(address substitute) internal view returns (address) {
