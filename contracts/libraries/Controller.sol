@@ -25,6 +25,7 @@ import {ISubstitute} from "../interfaces/ISubstitute.sol";
 import {IController} from "../interfaces/IController.sol";
 import {SubstituteLibrary} from "../libraries/Substitute.sol";
 import {ReentrancyGuard} from "./ReentrancyGuard.sol";
+import {SubstituteLibrary} from "./Substitute.sol";
 
 import {Epoch} from "./Epoch.sol";
 
@@ -57,9 +58,18 @@ abstract contract Controller is
         _weth = IWETH9(weth);
     }
 
-    modifier wrapETH() {
-        if (address(this).balance > 0) _weth.deposit{value: address(this).balance}();
+    modifier wrapAndRefundETH() {
+        bool hasMsgValue = address(this).balance > 0;
+        if (hasMsgValue) _weth.deposit{value: address(this).balance}();
         _;
+        if (hasMsgValue) {
+            uint256 leftBalance = _weth.balanceOf(address(this));
+            if (leftBalance > 0) {
+                _weth.withdraw(leftBalance);
+                (bool success,) = msg.sender.call{value: leftBalance}("");
+                require(success);
+            }
+        }
     }
 
     function _executeCouponTrade(
@@ -145,12 +155,6 @@ abstract contract Controller is
         return ISubstitute(substitute).underlyingToken();
     }
 
-    function _burnAllSubstitute(address substitute, address to) internal {
-        uint256 leftAmount = IERC20(substitute).balanceOf(address(this));
-        if (leftAmount == 0) return;
-        ISubstitute(substitute).burn(leftAmount, to);
-    }
-
     function _mintSubstituteAll(address token, address user, uint256 minRequired) internal {
         ISubstitute(token).mintAll(user, minRequired);
     }
@@ -178,7 +182,7 @@ abstract contract Controller is
         return _couponMarkets[couponKey.toId()];
     }
 
-    function setCouponMarket(CouponKey memory couponKey, address cloberMarket) public virtual onlyOwner {
+    function setCouponMarket(CouponKey memory couponKey, address cloberMarket) external onlyOwner {
         bytes memory metadata = Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKey);
         uint256 id = couponKey.toId();
         address wrappedCoupon = _wrapped1155Factory.getWrapped1155(address(_couponManager), id, metadata);

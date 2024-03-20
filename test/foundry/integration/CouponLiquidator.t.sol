@@ -17,6 +17,7 @@ import {IAssetPool} from "../../../contracts/interfaces/IAssetPool.sol";
 import {IAaveTokenSubstitute} from "../../../contracts/interfaces/IAaveTokenSubstitute.sol";
 import {ICouponOracle} from "../../../contracts/interfaces/ICouponOracle.sol";
 import {ICouponManager} from "../../../contracts/interfaces/ICouponManager.sol";
+import {ICouponLiquidator} from "../../../contracts/interfaces/ICouponLiquidator.sol";
 import {ILoanPositionManager, ILoanPositionManagerTypes} from "../../../contracts/interfaces/ILoanPositionManager.sol";
 import {Coupon, CouponLibrary} from "../../../contracts/libraries/Coupon.sol";
 import {CouponKey, CouponKeyLibrary} from "../../../contracts/libraries/CouponKey.sol";
@@ -42,6 +43,7 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
 
     address public constant MARKET_MAKER = address(999123);
 
+    ERC20PermitParams public emptyPermitParams;
     IAssetPool public assetPool;
     BorrowController public borrowController;
     CouponLiquidator public couponLiquidator;
@@ -213,14 +215,14 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         );
     }
 
-    function testLiquidator() public {
+    function testLiquidatorOnlyWithRouter() public {
         uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(700), 0.24 ether, 2);
 
         LoanPosition memory loanPosition = loanPositionManager.getPosition(positionId);
 
-        address feeRecipient = address(this);
-        uint256 beforeUSDCBalance = usdc.balanceOf(feeRecipient);
-        uint256 beforeWETHBalance = weth.balanceOf(feeRecipient);
+        address recipient = address(this);
+        uint256 beforeUSDCBalance = usdc.balanceOf(recipient);
+        uint256 beforeNativeBalance = recipient.balance;
 
         address[] memory assets = new address[](3);
         assets[0] = Constants.COUPON_USDC_SUBSTITUTE;
@@ -245,10 +247,158 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
             )
         );
 
-        couponLiquidator.liquidate(positionId, usdc.amount(500), data, feeRecipient);
+        couponLiquidator.liquidate(positionId, usdc.amount(500), data, 0, recipient);
 
-        assertEq(usdc.balanceOf(feeRecipient) - beforeUSDCBalance, 3344321, "USDC_BALANCE");
-        assertEq(weth.balanceOf(feeRecipient) - beforeWETHBalance, 3348150879705280, "WETH_BALANCE");
+        assertEq(usdc.balanceOf(recipient) - beforeUSDCBalance, 3344321, "USDC_BALANCE");
+        assertEq(recipient.balance - beforeNativeBalance, 3348150879705280, "ETH_BALANCE");
+    }
+
+    function testLiquidatorWithRouterAndOwnLiquidity() public {
+        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(700), 0.25 ether, 2);
+
+        LoanPosition memory loanPosition = loanPositionManager.getPosition(positionId);
+
+        address recipient = address(this);
+        uint256 beforeUSDCBalance = usdc.balanceOf(recipient);
+        uint256 beforeWETHBalance = weth.balanceOf(recipient);
+
+        address[] memory assets = new address[](3);
+        assets[0] = Constants.COUPON_USDC_SUBSTITUTE;
+        assets[1] = Constants.COUPON_WETH_SUBSTITUTE;
+        assets[2] = address(0);
+
+        uint256[] memory prices = new uint256[](3);
+        prices[0] = 99997900;
+        prices[1] = 205485580000;
+        prices[2] = 205485580000;
+
+        vm.warp(loanPosition.expiredWith.endTime() + 1);
+
+        vm.mockCall(address(oracle), abi.encodeWithSignature("getAssetsPrices(address[])", assets), abi.encode(prices));
+        assertEq(oracle.getAssetsPrices(assets)[1], 205485580000, "MANIPULATE_ORACLE");
+
+        bytes memory data = fromHex(
+            string.concat(
+                "83bd37f9000a000b041dcd65000803608bda99eed8c0028f5c00017F137D1D8d20BA54004Ba358E9C229DA26FA3Fa900000001",
+                this.remove0x(Strings.toHexString(address(couponLiquidator))),
+                "000000010501020601a0a52cd80b010001020000270100030200020b0001040500ff000000fae2ae0a9f87fd35b5b0e24b47bac796a7eefea1af88d065e77c8cc2239327c5edb3a432268e5831d87899d10eaa10f3ade05038a38251f758e5c0ebc6f780497a95e246eb9449f5e4770916dcd6396a912ce59144191c1204e64559fe8253a0e49e654800000000000000000000000000000000000000000000000000000000"
+            )
+        );
+
+        weth.approve(address(couponLiquidator), type(uint256).max);
+        couponLiquidator.liquidate(positionId, usdc.amount(500), data, type(uint256).max, recipient);
+
+        assertEq(usdc.balanceOf(recipient) - beforeUSDCBalance, 24317002, "USDC_BALANCE");
+        assertEq(weth.balanceOf(recipient), beforeWETHBalance - 6651849120294720, "WETH_BALANCE");
+    }
+
+    function testLiquidateOnlyWithOwnLiquidity() public {
+        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(700), 0.24 ether, 2);
+
+        LoanPosition memory loanPosition = loanPositionManager.getPosition(positionId);
+
+        address recipient = address(this);
+        uint256 beforeUSDCBalance = usdc.balanceOf(recipient);
+        uint256 beforeWETHBalance = weth.balanceOf(recipient);
+        uint256 beforeETHBalance = recipient.balance;
+
+        address[] memory assets = new address[](3);
+        assets[0] = Constants.COUPON_USDC_SUBSTITUTE;
+        assets[1] = Constants.COUPON_WETH_SUBSTITUTE;
+        assets[2] = address(0);
+
+        uint256[] memory prices = new uint256[](3);
+        prices[0] = 99997900;
+        prices[1] = 205485580000;
+        prices[2] = 205485580000;
+
+        vm.warp(loanPosition.expiredWith.endTime() + 1);
+
+        vm.mockCall(address(oracle), abi.encodeWithSignature("getAssetsPrices(address[])", assets), abi.encode(prices));
+        assertEq(oracle.getAssetsPrices(assets)[1], 205485580000, "MANIPULATE_ORACLE");
+
+        weth.approve(address(couponLiquidator), type(uint256).max);
+        (uint256 liquidationAmount, uint256 repayAmount, uint256 protocolFee) =
+            loanPositionManager.getLiquidationStatus(positionId, type(uint256).max);
+
+        couponLiquidator.liquidate(positionId, 0, new bytes(0), type(uint256).max, recipient);
+
+        assertEq(usdc.balanceOf(recipient), beforeUSDCBalance + liquidationAmount - protocolFee, "USDC_BALANCE");
+        assertEq(weth.balanceOf(recipient) + repayAmount, beforeWETHBalance, "WETH_BALANCE");
+        assertEq(recipient.balance, beforeETHBalance, "ETH_BALANCE");
+    }
+
+    function testLiquidatorOnlyWithOwnLiquidityWithNative() public {
+        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(700), 0.24 ether, 2);
+
+        LoanPosition memory loanPosition = loanPositionManager.getPosition(positionId);
+
+        address recipient = address(this);
+        uint256 beforeUSDCBalance = usdc.balanceOf(recipient);
+        uint256 beforeWETHBalance = weth.balanceOf(recipient);
+        uint256 beforeETHBalance = recipient.balance;
+
+        address[] memory assets = new address[](3);
+        assets[0] = Constants.COUPON_USDC_SUBSTITUTE;
+        assets[1] = Constants.COUPON_WETH_SUBSTITUTE;
+        assets[2] = address(0);
+
+        uint256[] memory prices = new uint256[](3);
+        prices[0] = 99997900;
+        prices[1] = 205485580000;
+        prices[2] = 205485580000;
+
+        vm.warp(loanPosition.expiredWith.endTime() + 1);
+
+        vm.mockCall(address(oracle), abi.encodeWithSignature("getAssetsPrices(address[])", assets), abi.encode(prices));
+        assertEq(oracle.getAssetsPrices(assets)[1], 205485580000, "MANIPULATE_ORACLE");
+
+        weth.approve(address(couponLiquidator), type(uint256).max);
+        (uint256 liquidationAmount, uint256 repayAmount, uint256 protocolFee) =
+            loanPositionManager.getLiquidationStatus(positionId, type(uint256).max);
+
+        couponLiquidator.liquidate{value: 0.1 ether}(positionId, 0, new bytes(0), type(uint256).max, recipient);
+
+        assertEq(usdc.balanceOf(recipient), beforeUSDCBalance + liquidationAmount - protocolFee, "USDC_BALANCE");
+        assertEq(weth.balanceOf(recipient) + repayAmount - 0.1 ether, beforeWETHBalance, "WETH_BALANCE");
+        assertEq(recipient.balance + 0.1 ether, beforeETHBalance, "ETH_BALANCE");
+    }
+
+    function testLiquidateOnlyWithOwnLiquidityPartially() public {
+        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(700), 0.24 ether, 2);
+
+        LoanPosition memory loanPosition = loanPositionManager.getPosition(positionId);
+
+        address recipient = address(this);
+        uint256 beforeUSDCBalance = usdc.balanceOf(recipient);
+        uint256 beforeWETHBalance = weth.balanceOf(recipient);
+        uint256 beforeETHBalance = recipient.balance;
+
+        address[] memory assets = new address[](3);
+        assets[0] = Constants.COUPON_USDC_SUBSTITUTE;
+        assets[1] = Constants.COUPON_WETH_SUBSTITUTE;
+        assets[2] = address(0);
+
+        uint256[] memory prices = new uint256[](3);
+        prices[0] = 99997900;
+        prices[1] = 205485580000;
+        prices[2] = 205485580000;
+
+        vm.warp(loanPosition.expiredWith.endTime() + 1);
+
+        vm.mockCall(address(oracle), abi.encodeWithSignature("getAssetsPrices(address[])", assets), abi.encode(prices));
+        assertEq(oracle.getAssetsPrices(assets)[1], 205485580000, "MANIPULATE_ORACLE");
+
+        weth.approve(address(couponLiquidator), type(uint256).max);
+        (uint256 liquidationAmount, uint256 repayAmount, uint256 protocolFee) =
+            loanPositionManager.getLiquidationStatus(positionId, 0.2 ether);
+
+        couponLiquidator.liquidate{value: 0.05 ether}(positionId, 0, new bytes(0), 0.15 ether, recipient);
+
+        assertEq(repayAmount, 0.2 ether, "REPAY_AMOUNT");
+        assertEq(usdc.balanceOf(recipient), beforeUSDCBalance + liquidationAmount - protocolFee, "USDC_BALANCE");
+        assertEq(weth.balanceOf(recipient) + 0.15 ether, beforeWETHBalance, "WETH_BALANCE");
+        assertEq(recipient.balance + 0.05 ether, beforeETHBalance, "ETH_BALANCE");
     }
 
     // Convert an hexadecimal character to their value
@@ -283,4 +433,6 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
     function assertEq(Epoch e1, Epoch e2, string memory err) internal {
         assertEq(Epoch.unwrap(e1), Epoch.unwrap(e2), err);
     }
+
+    receive() external payable {}
 }

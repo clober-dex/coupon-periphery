@@ -27,4 +27,11 @@ library SubstituteLibrary {
             substitute.mint(underlyingBalance, address(this));
         }
     }
+
+    function burnAll(ISubstitute substitute, address to) internal {
+        uint256 leftAmount = IERC20(address(substitute)).balanceOf(address(this));
+        if (leftAmount > 0) {
+            ISubstitute(substitute).burn(leftAmount, to);
+        }
+    }
 }
