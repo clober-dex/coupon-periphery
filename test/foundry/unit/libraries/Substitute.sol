@@ -25,29 +25,29 @@ contract SubstituteLibraryUnitTest is Test {
         IERC20(weth).approve(address(waweth), type(uint256).max);
     }
 
-    function testEnsureThisBalance() public {
-        _testEnsureThisBalance(
-            Input({substitute: 1 ether, underlying: 1 ether, ensure: 0 ether}),
-            Expected({thisSubstitute: 0, thisUnderlying: 0, wrapperSubstitute: 0, wrapperUnderlying: 0})
-        );
-        _testEnsureThisBalance(
-            Input({substitute: 1 ether, underlying: 1 ether, ensure: 0.5 ether}),
-            Expected({thisSubstitute: 0, thisUnderlying: 0, wrapperSubstitute: 0, wrapperUnderlying: 0})
-        );
-        _testEnsureThisBalance(
-            Input({substitute: 1 ether, underlying: 1 ether, ensure: 1 ether}),
-            Expected({thisSubstitute: 0, thisUnderlying: 0, wrapperSubstitute: 0, wrapperUnderlying: 0})
-        );
-        _testEnsureThisBalance(
-            Input({substitute: 1 ether, underlying: 1 ether, ensure: 1.5 ether}),
-            Expected({thisSubstitute: 0, thisUnderlying: 0, wrapperSubstitute: 0.5 ether, wrapperUnderlying: -0.5 ether})
-        );
-        _testEnsureThisBalance(
-            Input({substitute: 1 ether, underlying: 1 ether, ensure: 2 ether}),
+    function testMintAll() public {
+        _testMintAll(
+            Input({substitute: 1 ether, underlying: 1 ether, minRequired: 0 ether}),
             Expected({thisSubstitute: 0, thisUnderlying: 0, wrapperSubstitute: 1 ether, wrapperUnderlying: -1 ether})
         );
-        _testEnsureThisBalance(
-            Input({substitute: 1 ether, underlying: 1 ether, ensure: 2.3 ether}),
+        _testMintAll(
+            Input({substitute: 1 ether, underlying: 1 ether, minRequired: 0.5 ether}),
+            Expected({thisSubstitute: 0, thisUnderlying: 0, wrapperSubstitute: 1 ether, wrapperUnderlying: -1 ether})
+        );
+        _testMintAll(
+            Input({substitute: 1 ether, underlying: 1 ether, minRequired: 1 ether}),
+            Expected({thisSubstitute: 0, thisUnderlying: 0, wrapperSubstitute: 1 ether, wrapperUnderlying: -1 ether})
+        );
+        _testMintAll(
+            Input({substitute: 1 ether, underlying: 1 ether, minRequired: 1.5 ether}),
+            Expected({thisSubstitute: 0, thisUnderlying: 0, wrapperSubstitute: 1 ether, wrapperUnderlying: -1 ether})
+        );
+        _testMintAll(
+            Input({substitute: 1 ether, underlying: 1 ether, minRequired: 2 ether}),
+            Expected({thisSubstitute: 0, thisUnderlying: 0, wrapperSubstitute: 1 ether, wrapperUnderlying: -1 ether})
+        );
+        _testMintAll(
+            Input({substitute: 1 ether, underlying: 1 ether, minRequired: 2.3 ether}),
             Expected({
                 thisSubstitute: 0,
                 thisUnderlying: -0.3 ether,
@@ -60,7 +60,7 @@ contract SubstituteLibraryUnitTest is Test {
     struct Input {
         uint256 substitute;
         uint256 underlying;
-        uint256 ensure;
+        uint256 minRequired;
     }
 
     struct Expected {
@@ -70,7 +70,7 @@ contract SubstituteLibraryUnitTest is Test {
         int256 wrapperUnderlying;
     }
 
-    function _testEnsureThisBalance(Input memory input, Expected memory expected) internal {
+    function _testMintAll(Input memory input, Expected memory expected) internal {
         SubstituteLibraryWrapper wrapper = new SubstituteLibraryWrapper();
         IERC20(weth).approve(address(wrapper), type(uint256).max);
 
@@ -82,7 +82,7 @@ contract SubstituteLibraryUnitTest is Test {
         int256 beforeWrapperSubstitute = int256(IERC20(waweth).balanceOf(address(wrapper)));
         int256 beforeWrapperUnderlying = int256(IERC20(weth).balanceOf(address(wrapper)));
 
-        wrapper.ensureThisBalance(waweth, address(this), input.ensure);
+        wrapper.mintAll(waweth, address(this), input.minRequired);
 
         int256 afterThisSubstitute = int256(IERC20(waweth).balanceOf(address(this)));
         int256 afterThisUnderlying = int256(IERC20(weth).balanceOf(address(this)));
@@ -97,7 +97,7 @@ contract SubstituteLibraryUnitTest is Test {
 }
 
 contract SubstituteLibraryWrapper {
-    function ensureThisBalance(address substitute, address payer, uint256 amount) external {
-        SubstituteLibrary.ensureThisBalance(ISubstitute(substitute), payer, amount);
+    function mintAll(address substitute, address payer, uint256 minRequiredBalance) external {
+        SubstituteLibrary.mintAll(ISubstitute(substitute), payer, minRequiredBalance);
     }
 }

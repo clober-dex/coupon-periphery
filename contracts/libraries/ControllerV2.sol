@@ -176,21 +176,8 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         }
     }
 
-    function _ensureBalance(address token, address user, uint256 amount) internal {
-        // TODO: consider to use SubstituteLibrary
-        address underlyingToken = ISubstitute(token).underlyingToken();
-        uint256 thisBalance = IERC20(token).balanceOf(address(this));
-        uint256 underlyingBalance = IERC20(underlyingToken).balanceOf(address(this));
-        if (amount > thisBalance + underlyingBalance) {
-            unchecked {
-                IERC20(underlyingToken).safeTransferFrom(user, address(this), amount - thisBalance - underlyingBalance);
-                underlyingBalance = amount - thisBalance;
-            }
-        }
-        if (underlyingBalance > 0) {
-            IERC20(underlyingToken).approve(token, underlyingBalance);
-            ISubstitute(token).mint(underlyingBalance, address(this));
-        }
+    function _mintSubstituteAll(address token, address user, uint256 minRequired) internal {
+        ISubstitute(token).mintAll(user, minRequired);
     }
 
     function _wrapCoupons(Coupon[] memory coupons) internal {
