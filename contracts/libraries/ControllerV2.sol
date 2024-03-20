@@ -92,8 +92,6 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         bytes[] memory paramsDataList = new bytes[](length);
         address[] memory tokensToSettle = new address[](length + 1);
         tokensToSettle[length] = token;
-        IController.ERC20PermitParams[] memory erc20PermitParamsList;
-        IController.ERC721PermitParams[] memory erc721PermitParamsList;
 
         uint256 amount;
 
@@ -133,11 +131,20 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         }
 
         if (interestThreshold > 0) {
-            if (IERC20(token).balanceOf(address(this)) < uint256(interestThreshold)) _takeMaxToken(token, user);
+            if (IERC20(token).balanceOf(address(this)) < uint256(interestThreshold)) {
+                address underlyingToken = ISubstitute(token).underlyingToken();
+                uint256 minRequired = Math.min(
+                    IERC20(underlyingToken).allowance(user, address(this)), IERC20(underlyingToken).balanceOf(user)
+                );
+                ISubstitute(token).mintAll(user, Math.min(uint256(interestThreshold), minRequired));
+            }
             IERC20(token).approve(address(_cloberController), uint256(interestThreshold));
         }
 
         uint256 beforeBalance = IERC20(token).balanceOf(address(this));
+
+        IController.ERC20PermitParams[] memory erc20PermitParamsList;
+        IController.ERC721PermitParams[] memory erc721PermitParamsList;
         _cloberController.execute(
             actionList,
             paramsDataList,
@@ -146,6 +153,9 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
             erc721PermitParamsList,
             uint64(block.timestamp)
         );
+        if (interestThreshold > 0) {
+            IERC20(token).approve(address(_cloberController), 0);
+        }
         if (
             interestThreshold < 0
                 && IERC20(token).balanceOf(address(this)) < beforeBalance + uint256(-interestThreshold)
@@ -162,18 +172,6 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         uint256 leftAmount = IERC20(substitute).balanceOf(address(this));
         if (leftAmount == 0) return;
         ISubstitute(substitute).burn(leftAmount, to);
-    }
-
-    function _takeMaxToken(address token, address user) internal {
-        address underlyingToken = ISubstitute(token).underlyingToken();
-        uint256 amount =
-            Math.min(IERC20(underlyingToken).allowance(user, address(this)), IERC20(underlyingToken).balanceOf(user));
-        if (amount > 0) IERC20(underlyingToken).safeTransferFrom(user, address(this), amount);
-        uint256 underlyingBalance = IERC20(underlyingToken).balanceOf(address(this));
-        if (underlyingBalance > 0) {
-            IERC20(underlyingToken).approve(token, underlyingBalance);
-            ISubstitute(token).mint(underlyingBalance, address(this));
-        }
     }
 
     function _mintSubstituteAll(address token, address user, uint256 minRequired) internal {
