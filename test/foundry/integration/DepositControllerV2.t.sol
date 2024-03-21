@@ -28,6 +28,7 @@ import {Wrapped1155MetadataBuilder} from "../../../contracts/libraries/Wrapped11
 import {ERC20PermitParams, PermitSignature} from "../../../contracts/libraries/PermitParams.sol";
 import {IWrapped1155Factory} from "../../../contracts/external/wrapped1155/IWrapped1155Factory.sol";
 import {IController} from "../../../contracts/external/clober-v2/IController.sol";
+import {BookIdLibrary} from "../../../contracts/external/clober-v2/BookId.sol";
 import {IBookManager} from "../../../contracts/external/clober-v2/IBookManager.sol";
 import {IHooks} from "../../../contracts/external/clober-v2/IHooks.sol";
 import {Currency, CurrencyLibrary} from "../../../contracts/external/clober-v2/Currency.sol";
@@ -44,6 +45,7 @@ contract DepositControllerV2IntegrationTest is Test, ERC1155Holder {
     using CouponKeyLibrary for CouponKey;
     using EpochLibrary for Epoch;
     using PermitSignLibrary for Vm;
+    using BookIdLibrary for IBookManager.BookKey;
 
     address public constant MARKET_MAKER = address(999123);
 
@@ -65,7 +67,7 @@ contract DepositControllerV2IntegrationTest is Test, ERC1155Holder {
     address[] public wrappedCoupons;
 
     function setUp() public {
-        ForkUtils.fork(vm, Constants.FORK_BLOCK_NUMBER);
+        ForkUtils.fork(vm, 192219712);
         user = vm.addr(1);
 
         usdc = IERC20(Constants.USDC);
@@ -84,6 +86,17 @@ contract DepositControllerV2IntegrationTest is Test, ERC1155Holder {
         assetPool = IAssetPool(Constants.COUPON_ASSET_POOL);
         couponManager = ICouponManager(Constants.COUPON_COUPON_MANAGER);
         bondPositionManager = IBondPositionManager(Constants.COUPON_BOND_POSITION_MANAGER);
+        bookManager = IBookManager(Constants.CLOBER_BOOK_MANAGER);
+        cloberController = IController(Constants.CLOBER_CONTROLLER);
+
+        depositController = new DepositControllerV2(
+            Constants.WRAPPED1155_FACTORY,
+            address(cloberController),
+            address(bookManager),
+            address(couponManager),
+            Constants.WETH,
+            address(bondPositionManager)
+        );
 
         usdc.approve(wausdc, usdc.amount(3_000));
         IAaveTokenSubstitute(wausdc).mint(usdc.amount(3_000), address(this));
@@ -96,32 +109,41 @@ contract DepositControllerV2IntegrationTest is Test, ERC1155Holder {
         couponKeys.push(CouponKey({asset: wausdc, epoch: EpochLibrary.current().add(1)}));
         couponKeys.push(CouponKey({asset: waweth, epoch: EpochLibrary.current().add(1)}));
 
+        IController.MakeOrderParams[] memory makeOrderParamsList = new IController.MakeOrderParams[](8);
+        address[] memory tokensToSettle = new address[](6);
         for (uint256 i = 0; i < 4; i++) {
+            CouponKey memory key = couponKeys[i];
+            IController.OpenBookParams[] memory openBookParamsList = new IController.OpenBookParams[](2);
             address wrappedToken = wrapped1155Factory.requireWrapped1155(
                 address(couponManager),
-                couponKeys[i].toId(),
+                key.toId(),
                 Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKeys[i])
             );
             wrappedCoupons.push(wrappedToken);
-        }
+            IHooks hooks;
+            IBookManager.BookKey memory sellBookKey = IBookManager.BookKey({
+                base: Currency.wrap(wrappedToken),
+                unit: i % 2 == 0 ? 1 : 10 ** 6,
+                quote: Currency.wrap(i % 2 == 0 ? wausdc : waweth),
+                makerPolicy: FeePolicyLibrary.encode(true, 100),
+                hooks: hooks,
+                takerPolicy: FeePolicyLibrary.encode(true, 100)
+            });
+            IBookManager.BookKey memory buyBookKey = IBookManager.BookKey({
+                base: Currency.wrap(i % 2 == 0 ? wausdc : waweth),
+                unit: i % 2 == 0 ? 1 : 10 ** 6,
+                quote: Currency.wrap(wrappedCoupons[i]),
+                makerPolicy: FeePolicyLibrary.encode(true, 100),
+                hooks: hooks,
+                takerPolicy: FeePolicyLibrary.encode(true, 100)
+            });
 
-        bookManager = IBookManager(address(new MockBookManager()));
-        cloberController = IController(address(new MockController(wrappedCoupons)));
-        depositController = new DepositControllerV2(
-            Constants.WRAPPED1155_FACTORY,
-            address(cloberController),
-            address(bookManager),
-            address(couponManager),
-            Constants.WETH,
-            address(bondPositionManager)
-        );
+            openBookParamsList[0] = IController.OpenBookParams({key: sellBookKey, hookData: ""});
+            openBookParamsList[1] = IController.OpenBookParams({key: buyBookKey, hookData: ""});
+            cloberController.open(openBookParamsList, uint64(block.timestamp));
+            depositController.setCouponBookKey(key, sellBookKey, buyBookKey);
 
-        IERC20(wausdc).transfer(address(cloberController), IERC20(wausdc).amount(500));
-        IERC20(waweth).transfer(address(cloberController), IERC20(waweth).amount(500));
-
-        for (uint256 i = 0; i < 4; i++) {
-            CouponKey memory key = couponKeys[i];
-            uint256 amount = IERC20(wrappedCoupons[i]).amount(100);
+            uint256 amount = IERC20(wrappedToken).amount(600);
             Coupon[] memory coupons = Utils.toArr(Coupon(key, amount));
             vm.prank(Constants.COUPON_LOAN_POSITION_MANAGER);
             couponManager.mintBatch(address(this), coupons, "");
@@ -131,37 +153,36 @@ contract DepositControllerV2IntegrationTest is Test, ERC1155Holder {
                 coupons,
                 Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKeys[i])
             );
-            IERC20(wrappedCoupons[i]).transfer(
-                address(cloberController), IERC20(wrappedCoupons[i]).balanceOf(address(this))
-            );
 
-            IHooks hooks;
-            IBookManager.BookKey memory sellBookKey = IBookManager.BookKey({
-                base: Currency.wrap(wrappedCoupons[i]),
-                unit: 10 ** 6,
-                quote: Currency.wrap(i % 2 == 0 ? wausdc : waweth),
-                makerPolicy: FeePolicyLibrary.encode(true, -100),
-                hooks: hooks,
-                takerPolicy: FeePolicyLibrary.encode(true, -100)
+            makeOrderParamsList[i * 2] = IController.MakeOrderParams({
+                id: sellBookKey.toId(),
+                tick: Tick.wrap(-39122),
+                quoteAmount: i % 2 == 0 ? IERC20(wausdc).amount(500) : IERC20(waweth).amount(500),
+                hookData: ""
             });
-            IBookManager.BookKey memory buyBookKey = IBookManager.BookKey({
-                base: Currency.wrap(i % 2 == 0 ? wausdc : waweth),
-                unit: 10 ** 6,
-                quote: Currency.wrap(wrappedCoupons[i]),
-                makerPolicy: FeePolicyLibrary.encode(true, -100),
-                hooks: hooks,
-                takerPolicy: FeePolicyLibrary.encode(true, -100)
+            makeOrderParamsList[i * 2 + 1] = IController.MakeOrderParams({
+                id: buyBookKey.toId(),
+                tick: Tick.wrap(39122),
+                quoteAmount: IERC20(wrappedToken).amount(500),
+                hookData: ""
             });
-
-            depositController.setCouponBookKey(couponKeys[i], sellBookKey, buyBookKey);
+            tokensToSettle[i] = wrappedToken;
+            IERC20(wrappedToken).approve(address(cloberController), type(uint256).max);
         }
+
+        IERC20(wausdc).approve(address(cloberController), type(uint256).max);
+        IERC20(waweth).approve(address(cloberController), type(uint256).max);
+        tokensToSettle[4] = address (wausdc);
+        tokensToSettle[5] = address (waweth);
+        IController.ERC20PermitParams[] memory permitParamsList;
+        cloberController.make(makeOrderParamsList, tokensToSettle, permitParamsList, uint64(block.timestamp));
     }
 
     function _checkWrappedTokenAlmost0Balance(address who) internal {
         for (uint256 i = 0; i < wrappedCoupons.length; ++i) {
             assertLt(
                 IERC20(wrappedCoupons[i]).balanceOf(who),
-                i < 4 ? 100 : 1e14,
+                i % 2 == 0 ? 100 : 1e14,
                 string.concat(who.toHexString(), " WRAPPED_TOKEN_", i.toString())
             );
         }
@@ -244,7 +265,6 @@ contract DepositControllerV2IntegrationTest is Test, ERC1155Holder {
         BondPosition memory beforePosition = bondPositionManager.getPosition(tokenId);
         uint256 beforeBalance = usdc.balanceOf(user);
 
-        console.log("---------");
         depositController.adjust(
             tokenId,
             amount / 2,
