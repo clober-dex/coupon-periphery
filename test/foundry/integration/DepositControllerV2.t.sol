@@ -27,6 +27,7 @@ import {BondPosition} from "../../../contracts/libraries/BondPosition.sol";
 import {Wrapped1155MetadataBuilder} from "../../../contracts/libraries/Wrapped1155MetadataBuilder.sol";
 import {ERC20PermitParams, PermitSignature} from "../../../contracts/libraries/PermitParams.sol";
 import {IWrapped1155Factory} from "../../../contracts/external/wrapped1155/IWrapped1155Factory.sol";
+import {Tick} from "../../../contracts/external/clober-v2/Tick.sol";
 import {IController} from "../../../contracts/external/clober-v2/IController.sol";
 import {BookIdLibrary} from "../../../contracts/external/clober-v2/BookId.sol";
 import {IBookManager} from "../../../contracts/external/clober-v2/IBookManager.sol";
@@ -115,9 +116,7 @@ contract DepositControllerV2IntegrationTest is Test, ERC1155Holder {
             CouponKey memory key = couponKeys[i];
             IController.OpenBookParams[] memory openBookParamsList = new IController.OpenBookParams[](2);
             address wrappedToken = wrapped1155Factory.requireWrapped1155(
-                address(couponManager),
-                key.toId(),
-                Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKeys[i])
+                address(couponManager), key.toId(), Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKeys[i])
             );
             wrappedCoupons.push(wrappedToken);
             IHooks hooks;
@@ -172,8 +171,8 @@ contract DepositControllerV2IntegrationTest is Test, ERC1155Holder {
 
         IERC20(wausdc).approve(address(cloberController), type(uint256).max);
         IERC20(waweth).approve(address(cloberController), type(uint256).max);
-        tokensToSettle[4] = address (wausdc);
-        tokensToSettle[5] = address (waweth);
+        tokensToSettle[4] = address(wausdc);
+        tokensToSettle[5] = address(waweth);
         IController.ERC20PermitParams[] memory permitParamsList;
         cloberController.make(makeOrderParamsList, tokensToSettle, permitParamsList, uint64(block.timestamp));
     }

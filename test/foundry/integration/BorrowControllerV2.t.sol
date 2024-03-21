@@ -27,6 +27,8 @@ import {ERC20PermitParams, PermitSignature} from "../../../contracts/libraries/P
 import {IWrapped1155Factory} from "../../../contracts/external/wrapped1155/IWrapped1155Factory.sol";
 import {CloberOrderBook} from "../../../contracts/external/clober/CloberOrderBook.sol";
 import {BorrowControllerV2} from "../../../contracts/BorrowControllerV2.sol";
+import {Tick} from "../../../contracts/external/clober-v2/Tick.sol";
+import {BookIdLibrary} from "../../../contracts/external/clober-v2/BookId.sol";
 import {IBorrowControllerV2} from "../../../contracts/interfaces/IBorrowControllerV2.sol";
 import {IControllerV2} from "../../../contracts/interfaces/IControllerV2.sol";
 import {IController} from "../../../contracts/external/clober-v2/IController.sol";
@@ -45,6 +47,7 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
     using CouponKeyLibrary for CouponKey;
     using EpochLibrary for Epoch;
     using PermitSignLibrary for Vm;
+    using BookIdLibrary for IBookManager.BookKey;
 
     address public constant MARKET_MAKER = address(999123);
 
@@ -68,7 +71,7 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
     address[] public wrappedCoupons;
 
     function setUp() public {
-        ForkUtils.fork(vm, Constants.FORK_BLOCK_NUMBER);
+        ForkUtils.fork(vm, 192621731);
         user = vm.addr(1);
 
         usdc = IERC20(Constants.USDC);
@@ -96,6 +99,18 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
         assetPool = IAssetPool(Constants.COUPON_ASSET_POOL);
         couponManager = ICouponManager(Constants.COUPON_COUPON_MANAGER);
         loanPositionManager = ILoanPositionManager(Constants.COUPON_LOAN_POSITION_MANAGER);
+        bookManager = IBookManager(Constants.CLOBER_BOOK_MANAGER);
+        cloberController = IController(Constants.CLOBER_CONTROLLER);
+
+        borrowController = new BorrowControllerV2(
+            Constants.WRAPPED1155_FACTORY,
+            address(cloberController),
+            address(bookManager),
+            address(couponManager),
+            Constants.WETH,
+            address(loanPositionManager),
+            Constants.ODOS_V2_SWAP_ROUTER
+        );
 
         usdc.approve(wausdc, usdc.amount(3_000));
         IAaveTokenSubstitute(wausdc).mint(usdc.amount(3_000), address(this));
@@ -108,33 +123,39 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
         couponKeys.push(CouponKey({asset: wausdc, epoch: EpochLibrary.current().add(1)}));
         couponKeys.push(CouponKey({asset: waweth, epoch: EpochLibrary.current().add(1)}));
 
-        for (uint256 i = 0; i < 4; i++) {
-            address wrappedToken = wrapped1155Factory.requireWrapped1155(
-                address(couponManager),
-                couponKeys[i].toId(),
-                Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKeys[i])
-            );
-            wrappedCoupons.push(wrappedToken);
-        }
-
-        bookManager = IBookManager(address(new MockBookManager()));
-        cloberController = IController(address(new MockController(wrappedCoupons)));
-        borrowController = new BorrowControllerV2(
-            Constants.WRAPPED1155_FACTORY,
-            address(cloberController),
-            address(bookManager),
-            address(couponManager),
-            Constants.WETH,
-            address(loanPositionManager),
-            Constants.ODOS_V2_SWAP_ROUTER
-        );
-
-        IERC20(wausdc).transfer(address(cloberController), IERC20(wausdc).amount(1500));
-        IERC20(waweth).transfer(address(cloberController), IERC20(waweth).amount(1500));
-
+        IController.MakeOrderParams[] memory makeOrderParamsList = new IController.MakeOrderParams[](8);
+        address[] memory tokensToSettle = new address[](6);
         for (uint256 i = 0; i < 4; i++) {
             CouponKey memory key = couponKeys[i];
-            uint256 amount = IERC20(wrappedCoupons[i]).amount(1100);
+            IController.OpenBookParams[] memory openBookParamsList = new IController.OpenBookParams[](2);
+            address wrappedToken = wrapped1155Factory.requireWrapped1155(
+                address(couponManager), key.toId(), Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKeys[i])
+            );
+            wrappedCoupons.push(wrappedToken);
+            IHooks hooks;
+            IBookManager.BookKey memory sellBookKey = IBookManager.BookKey({
+                base: Currency.wrap(wrappedToken),
+                unit: i % 2 == 0 ? 1 : 10 ** 6,
+                quote: Currency.wrap(i % 2 == 0 ? wausdc : waweth),
+                makerPolicy: FeePolicyLibrary.encode(true, 100),
+                hooks: hooks,
+                takerPolicy: FeePolicyLibrary.encode(true, 100)
+            });
+            IBookManager.BookKey memory buyBookKey = IBookManager.BookKey({
+                base: Currency.wrap(i % 2 == 0 ? wausdc : waweth),
+                unit: i % 2 == 0 ? 1 : 10 ** 6,
+                quote: Currency.wrap(wrappedCoupons[i]),
+                makerPolicy: FeePolicyLibrary.encode(true, 100),
+                hooks: hooks,
+                takerPolicy: FeePolicyLibrary.encode(true, 100)
+            });
+
+            openBookParamsList[0] = IController.OpenBookParams({key: sellBookKey, hookData: ""});
+            openBookParamsList[1] = IController.OpenBookParams({key: buyBookKey, hookData: ""});
+            cloberController.open(openBookParamsList, uint64(block.timestamp));
+            borrowController.setCouponBookKey(key, sellBookKey, buyBookKey);
+
+            uint256 amount = IERC20(wrappedToken).amount(1600);
             Coupon[] memory coupons = Utils.toArr(Coupon(key, amount));
             vm.prank(Constants.COUPON_LOAN_POSITION_MANAGER);
             couponManager.mintBatch(address(this), coupons, "");
@@ -144,30 +165,29 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
                 coupons,
                 Wrapped1155MetadataBuilder.buildWrapped1155Metadata(couponKeys[i])
             );
-            IERC20(wrappedCoupons[i]).transfer(
-                address(cloberController), IERC20(wrappedCoupons[i]).balanceOf(address(this))
-            );
 
-            IHooks hooks;
-            IBookManager.BookKey memory sellBookKey = IBookManager.BookKey({
-                base: Currency.wrap(wrappedCoupons[i]),
-                unit: 10 ** 6,
-                quote: Currency.wrap(i % 2 == 0 ? wausdc : waweth),
-                makerPolicy: FeePolicyLibrary.encode(true, -100),
-                hooks: hooks,
-                takerPolicy: FeePolicyLibrary.encode(true, -100)
+            makeOrderParamsList[i * 2] = IController.MakeOrderParams({
+                id: sellBookKey.toId(),
+                tick: Tick.wrap(-39122),
+                quoteAmount: i % 2 == 0 ? IERC20(wausdc).amount(1200) : IERC20(waweth).amount(1200),
+                hookData: ""
             });
-            IBookManager.BookKey memory buyBookKey = IBookManager.BookKey({
-                base: Currency.wrap(i % 2 == 0 ? wausdc : waweth),
-                unit: 10 ** 6,
-                quote: Currency.wrap(wrappedCoupons[i]),
-                makerPolicy: FeePolicyLibrary.encode(true, -100),
-                hooks: hooks,
-                takerPolicy: FeePolicyLibrary.encode(true, -100)
+            makeOrderParamsList[i * 2 + 1] = IController.MakeOrderParams({
+                id: buyBookKey.toId(),
+                tick: Tick.wrap(39122),
+                quoteAmount: IERC20(wrappedToken).amount(1200),
+                hookData: ""
             });
-
-            borrowController.setCouponBookKey(couponKeys[i], sellBookKey, buyBookKey);
+            tokensToSettle[i] = wrappedToken;
+            IERC20(wrappedToken).approve(address(cloberController), type(uint256).max);
         }
+
+        IERC20(wausdc).approve(address(cloberController), type(uint256).max);
+        IERC20(waweth).approve(address(cloberController), type(uint256).max);
+        tokensToSettle[4] = address(wausdc);
+        tokensToSettle[5] = address(waweth);
+        IController.ERC20PermitParams[] memory permitParamsList;
+        cloberController.make(makeOrderParamsList, tokensToSettle, permitParamsList, uint64(block.timestamp));
 
         vm.prank(Constants.USDC_WHALE);
         usdc.transfer(user, usdc.amount(10_000));
@@ -213,7 +233,7 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
         uint256 positionId = _initialBorrow(user, wausdc, waweth, collateralAmount, debtAmount, 1);
         LoanPosition memory loanPosition = loanPositionManager.getPosition(positionId);
 
-        uint256 couponAmount = 0.02 ether;
+        uint256 couponAmount = 0.0201 ether;
 
         assertEq(loanPositionManager.ownerOf(positionId), user, "POSITION_OWNER");
         assertEq(usdc.balanceOf(user), beforeUSDCBalance - collateralAmount, "USDC_BALANCE");
@@ -250,7 +270,7 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
         LoanPosition memory afterLoanPosition = loanPositionManager.getPosition(positionId);
 
         uint256 borrowMoreAmount = 0.5 ether;
-        uint256 couponAmount = 0.01 ether;
+        uint256 couponAmount = 0.0101 ether;
 
         assertEq(usdc.balanceOf(user), beforeUSDCBalance, "USDC_BALANCE");
         assertGe(user.balance, beforeETHBalance + borrowMoreAmount - couponAmount, "NATIVE_BALANCE_GE");
@@ -348,13 +368,12 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
         uint256 beforeETHBalance = user.balance;
         LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
         uint16 epochs = 1;
-        uint256 maxPayInterest = 0.02 ether * uint256(epochs);
+        uint256 maxPayInterest = 0.0201 ether * uint256(epochs);
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
 
         IBorrowControllerV2.SwapParams memory swapParams;
         vm.startPrank(user);
-        console.log(maxPayInterest);
         weth.approve(address(borrowController), maxPayInterest);
         borrowController.adjust{value: maxPayInterest}(
             positionId,
@@ -378,7 +397,7 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
         );
         assertLe(
             user.balance + weth.balanceOf(user) - beforeWETHBalance,
-            beforeETHBalance - maxPayInterest,
+            beforeETHBalance - maxPayInterest + 0.0001 ether,
             "NATIVE_BALANCE_LE"
         );
         assertEq(beforeLoanPosition.expiredWith.add(epochs), afterLoanPosition.expiredWith, "POSITION_EXPIRE_EPOCH");
@@ -395,7 +414,7 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
         uint256 beforeETHBalance = user.balance;
         LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
         uint16 epochs = 1;
-        uint256 minEarnInterest = 0.02 ether * epochs;
+        uint256 minEarnInterest = 0.0199 ether * epochs;
         PermitSignature memory permit721Params =
             vm.signPermit(1, loanPositionManager, address(borrowController), positionId);
 
@@ -483,16 +502,16 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
         IBorrowControllerV2.SwapParams memory swapParams;
         swapParams.data = fromHex(
             string.concat(
-                "83bd37f9000a000b041dcd65000803608bda99eed8c0028f5c00017F137D1D8d20BA54004Ba358E9C229DA26FA3Fa900000001",
+                "83bd37f9000a000b041dcd65000801f447c4595e16b000068d00019b57DcA972Db5D8866c630554AcdbDfE58b2659c00000001",
                 this.remove0x(Strings.toHexString(address(borrowController))),
-                "000000010501020601a0a52cd80b010001020000270100030200020b0001040500ff000000fae2ae0a9f87fd35b5b0e24b47bac796a7eefea1af88d065e77c8cc2239327c5edb3a432268e5831d87899d10eaa10f3ade05038a38251f758e5c0ebc6f780497a95e246eb9449f5e4770916dcd6396a912ce59144191c1204e64559fe8253a0e49e654800000000000000000000000000000000000000000000000000000000"
+                "000000010803020801b9269d0f2801010102011dc097350301010103010019011fe3097c0b010104010001240149360b0101050100012fba5f510b0101060100000b0101070100ff0000000000000000000000000000000000000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583182af49447d8a07e3bd95bd0d56f35241523fbab1db86e7fe4074e3c29d2fd0ed1d104c00e11a196b4ef385d20247f5d0f9cd2e3f716b9a55e71df9347fcdc35463e3770c2fb992716cd070b63540b947f6416e1ed89a3abca179f971b30555eb2234f30c6c9ab1c1dc392b53f9fb2ea6d9dace5f99efdc480000000000000000000000000000000000000000"
             )
         );
         swapParams.amount = usdc.amount(500);
         swapParams.inSubstitute = address(wausdc);
 
         vm.prank(user);
-        borrowController.borrow{value: 0.16 ether}(
+        borrowController.borrow{value: 0.26 ether}(
             waweth,
             wausdc,
             collateralAmount,
@@ -507,7 +526,7 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
 
         assertEq(loanPositionManager.ownerOf(positionId), user, "POSITION_OWNER");
         assertGt(usdc.balanceOf(user) - beforeUSDCBalance, 0, "USDC_BALANCE");
-        assertLt(beforeETHBalance - user.balance, 0.16 ether, "NATIVE_BALANCE");
+        assertLt(beforeETHBalance - user.balance, 0.26 ether, "NATIVE_BALANCE");
         assertEq(beforeWETHBalance, weth.balanceOf(user), "WETH_BALANCE");
         assertEq(loanPosition.expiredWith, EpochLibrary.current(), "POSITION_EXPIRE_EPOCH");
         assertEq(loanPosition.collateralAmount, collateralAmount, "POSITION_COLLATERAL_AMOUNT");
@@ -544,16 +563,16 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
         IBorrowControllerV2.SwapParams memory swapParams;
         swapParams.data = fromHex(
             string.concat(
-                "83bd37f9000a000b041dcd65000803608bda99eed8c0028f5c00017F137D1D8d20BA54004Ba358E9C229DA26FA3Fa900000001",
+                "83bd37f9000a000b041dcd65000801f447c4595e16b000068d00019b57DcA972Db5D8866c630554AcdbDfE58b2659c00000001",
                 this.remove0x(Strings.toHexString(address(borrowController))),
-                "000000010501020601a0a52cd80b010001020000270100030200020b0001040500ff000000fae2ae0a9f87fd35b5b0e24b47bac796a7eefea1af88d065e77c8cc2239327c5edb3a432268e5831d87899d10eaa10f3ade05038a38251f758e5c0ebc6f780497a95e246eb9449f5e4770916dcd6396a912ce59144191c1204e64559fe8253a0e49e654800000000000000000000000000000000000000000000000000000000"
+                "000000010803020801b9269d0f2801010102011dc097350301010103010019011fe3097c0b010104010001240149360b0101050100012fba5f510b0101060100000b0101070100ff0000000000000000000000000000000000000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583182af49447d8a07e3bd95bd0d56f35241523fbab1db86e7fe4074e3c29d2fd0ed1d104c00e11a196b4ef385d20247f5d0f9cd2e3f716b9a55e71df9347fcdc35463e3770c2fb992716cd070b63540b947f6416e1ed89a3abca179f971b30555eb2234f30c6c9ab1c1dc392b53f9fb2ea6d9dace5f99efdc480000000000000000000000000000000000000000"
             )
         );
         swapParams.amount = usdc.amount(500);
         swapParams.inSubstitute = address(wausdc);
 
         vm.prank(user);
-        borrowController.adjust{value: 0.16 ether}(
+        borrowController.adjust{value: 0.26 ether}(
             positionId,
             loanPosition.collateralAmount + collateralAmount,
             loanPosition.debtAmount + debtAmount,
@@ -569,7 +588,7 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
 
         assertEq(loanPositionManager.ownerOf(positionId), user, "POSITION_OWNER");
         assertGt(usdc.balanceOf(user) - beforeUSDCBalance, 0, "USDC_BALANCE");
-        assertLt(beforeETHBalance - user.balance, 0.16 ether, "NATIVE_BALANCE");
+        assertLt(beforeETHBalance - user.balance, 0.26 ether, "NATIVE_BALANCE");
         assertEq(beforeWETHBalance, weth.balanceOf(user), "WETH_BALANCE");
         assertEq(loanPosition.expiredWith, EpochLibrary.current(), "POSITION_EXPIRE_EPOCH");
         assertEq(
@@ -589,14 +608,14 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
         uint256 beforeETHBalance = user.balance;
         LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
         uint256 collateralAmount = usdc.amount(500);
-        uint256 debtAmount = 0.75 ether;
+        uint256 debtAmount = 0.86 ether;
 
         IBorrowControllerV2.SwapParams memory swapParams;
         swapParams.data = fromHex(
             string.concat(
-                "83bd37f9000a000b041dcd65000803608bda99eed8c0028f5c00017F137D1D8d20BA54004Ba358E9C229DA26FA3Fa900000001",
+                "83bd37f9000a000b041dcd65000801f447c4595e16b000068d00019b57DcA972Db5D8866c630554AcdbDfE58b2659c00000001",
                 this.remove0x(Strings.toHexString(address(borrowController))),
-                "000000010501020601a0a52cd80b010001020000270100030200020b0001040500ff000000fae2ae0a9f87fd35b5b0e24b47bac796a7eefea1af88d065e77c8cc2239327c5edb3a432268e5831d87899d10eaa10f3ade05038a38251f758e5c0ebc6f780497a95e246eb9449f5e4770916dcd6396a912ce59144191c1204e64559fe8253a0e49e654800000000000000000000000000000000000000000000000000000000"
+                "000000010803020801b9269d0f2801010102011dc097350301010103010019011fe3097c0b010104010001240149360b0101050100012fba5f510b0101060100000b0101070100ff0000000000000000000000000000000000000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583182af49447d8a07e3bd95bd0d56f35241523fbab1db86e7fe4074e3c29d2fd0ed1d104c00e11a196b4ef385d20247f5d0f9cd2e3f716b9a55e71df9347fcdc35463e3770c2fb992716cd070b63540b947f6416e1ed89a3abca179f971b30555eb2234f30c6c9ab1c1dc392b53f9fb2ea6d9dace5f99efdc480000000000000000000000000000000000000000"
             )
         );
         swapParams.amount = usdc.amount(500);
@@ -635,7 +654,7 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
     }
 
     function testRepayAllWithCollateral() public {
-        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 0.2 ether, 2);
+        uint256 positionId = _initialBorrow(user, wausdc, waweth, usdc.amount(10000), 0.14 ether, 2);
 
         uint256 beforeUSDCBalance = usdc.balanceOf(user);
         uint256 beforeETHBalance = user.balance;
@@ -645,9 +664,9 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
         IBorrowControllerV2.SwapParams memory swapParams;
         swapParams.data = fromHex(
             string.concat(
-                "83bd37f9000a000b041dcd65000803608bda99eed8c0028f5c00017F137D1D8d20BA54004Ba358E9C229DA26FA3Fa900000001",
+                "83bd37f9000a000b041dcd65000801f447c4595e16b000068d00019b57DcA972Db5D8866c630554AcdbDfE58b2659c00000001",
                 this.remove0x(Strings.toHexString(address(borrowController))),
-                "000000010501020601a0a52cd80b010001020000270100030200020b0001040500ff000000fae2ae0a9f87fd35b5b0e24b47bac796a7eefea1af88d065e77c8cc2239327c5edb3a432268e5831d87899d10eaa10f3ade05038a38251f758e5c0ebc6f780497a95e246eb9449f5e4770916dcd6396a912ce59144191c1204e64559fe8253a0e49e654800000000000000000000000000000000000000000000000000000000"
+                "000000010803020801b9269d0f2801010102011dc097350301010103010019011fe3097c0b010104010001240149360b0101050100012fba5f510b0101060100000b0101070100ff0000000000000000000000000000000000000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583182af49447d8a07e3bd95bd0d56f35241523fbab1db86e7fe4074e3c29d2fd0ed1d104c00e11a196b4ef385d20247f5d0f9cd2e3f716b9a55e71df9347fcdc35463e3770c2fb992716cd070b63540b947f6416e1ed89a3abca179f971b30555eb2234f30c6c9ab1c1dc392b53f9fb2ea6d9dace5f99efdc480000000000000000000000000000000000000000"
             )
         );
         swapParams.amount = usdc.amount(500);
@@ -673,7 +692,7 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
 
         assertEq(usdc.balanceOf(user), beforeUSDCBalance, "USDC_BALANCE");
         assertGe(user.balance, beforeETHBalance, "NATIVE_BALANCE");
-        assertEq(Epoch.wrap(645), afterLoanPosition.expiredWith, "POSITION_EXPIRE_EPOCH");
+        assertEq(Epoch.wrap(649), afterLoanPosition.expiredWith, "POSITION_EXPIRE_EPOCH");
         assertEq(
             beforeLoanPosition.collateralAmount - usdc.amount(500),
             afterLoanPosition.collateralAmount,
@@ -691,14 +710,14 @@ contract BorrowControllerV2IntegrationTest is Test, ERC1155Holder {
         uint256 beforeETHBalance = user.balance;
         LoanPosition memory beforeLoanPosition = loanPositionManager.getPosition(positionId);
         uint256 collateralAmount = usdc.amount(5000);
-        uint256 maxDebtAmount = 0.75 ether;
+        uint256 maxDebtAmount = 0.86 ether;
 
         IBorrowControllerV2.SwapParams memory swapParams;
         swapParams.data = fromHex(
             string.concat(
-                "83bd37f9000a000b041dcd65000803608bda99eed8c0028f5c00017F137D1D8d20BA54004Ba358E9C229DA26FA3Fa900000001",
+                "83bd37f9000a000b041dcd65000801f447c4595e16b000068d00019b57DcA972Db5D8866c630554AcdbDfE58b2659c00000001",
                 this.remove0x(Strings.toHexString(address(borrowController))),
-                "000000010501020601a0a52cd80b010001020000270100030200020b0001040500ff000000fae2ae0a9f87fd35b5b0e24b47bac796a7eefea1af88d065e77c8cc2239327c5edb3a432268e5831d87899d10eaa10f3ade05038a38251f758e5c0ebc6f780497a95e246eb9449f5e4770916dcd6396a912ce59144191c1204e64559fe8253a0e49e654800000000000000000000000000000000000000000000000000000000"
+                "000000010803020801b9269d0f2801010102011dc097350301010103010019011fe3097c0b010104010001240149360b0101050100012fba5f510b0101060100000b0101070100ff0000000000000000000000000000000000000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e583182af49447d8a07e3bd95bd0d56f35241523fbab1db86e7fe4074e3c29d2fd0ed1d104c00e11a196b4ef385d20247f5d0f9cd2e3f716b9a55e71df9347fcdc35463e3770c2fb992716cd070b63540b947f6416e1ed89a3abca179f971b30555eb2234f30c6c9ab1c1dc392b53f9fb2ea6d9dace5f99efdc480000000000000000000000000000000000000000"
             )
         );
         swapParams.amount = usdc.amount(500);

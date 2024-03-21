@@ -119,12 +119,7 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
             tokensToSettle[couponsToBurn.length + i] = Currency.unwrap(key.base);
             amount = couponsToMint[i].amount;
             paramsDataList[couponsToBurn.length + i] = abi.encode(
-                IController.SpendOrderParams({
-                    id: key.toId(),
-                    limitPrice: 0,
-                    baseAmount: amount,
-                    hookData: ""
-                })
+                IController.SpendOrderParams({id: key.toId(), limitPrice: 0, baseAmount: amount, hookData: ""})
             );
             // key.base can't be Currency.NATIVE
             IERC20(Currency.unwrap(key.base)).approve(address(_cloberController), amount);
