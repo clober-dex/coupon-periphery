@@ -99,12 +99,12 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
         for (uint256 i = 0; i < length; ++i) {
             actionList[i] = IController.Action.TAKE;
             IBookManager.BookKey memory key = _couponBuyMarkets[couponsToBurn[i].key.toId()];
-            tokensToSettle[i] = Currency.unwrap(key.base);
+            tokensToSettle[i] = Currency.unwrap(key.quote);
             amount += couponsToBurn[i].amount;
             paramsDataList[i] = abi.encode(
                 IController.TakeOrderParams({
                     id: key.toId(),
-                    limitPrice: type(uint256).max,
+                    limitPrice: 0,
                     quoteAmount: couponsToBurn[i].amount,
                     hookData: ""
                 })
@@ -121,7 +121,7 @@ abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, Re
             paramsDataList[couponsToBurn.length + i] = abi.encode(
                 IController.SpendOrderParams({
                     id: key.toId(),
-                    limitPrice: type(uint256).max,
+                    limitPrice: 0,
                     baseAmount: amount,
                     hookData: ""
                 })
