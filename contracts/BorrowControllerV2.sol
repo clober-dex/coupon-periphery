@@ -5,21 +5,19 @@ pragma solidity ^0.8.0;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {IBorrowController} from "./interfaces/IBorrowController.sol";
+import {IBorrowControllerV2} from "./interfaces/IBorrowControllerV2.sol";
 import {ILoanPositionManager} from "./interfaces/ILoanPositionManager.sol";
 import {ISubstitute} from "./interfaces/ISubstitute.sol";
-import {SubstituteLibrary} from "./libraries/Substitute.sol";
 import {IPositionLocker} from "./interfaces/IPositionLocker.sol";
 import {LoanPosition} from "./libraries/LoanPosition.sol";
 import {Coupon} from "./libraries/Coupon.sol";
 import {Epoch, EpochLibrary} from "./libraries/Epoch.sol";
-import {Controller} from "./libraries/Controller.sol";
+import {ControllerV2} from "./libraries/ControllerV2.sol";
 import {ERC20PermitParams, PermitSignature, PermitParamsLibrary} from "./libraries/PermitParams.sol";
 
-contract BorrowController is IBorrowController, Controller, IPositionLocker {
+contract BorrowControllerV2 is IBorrowControllerV2, ControllerV2, IPositionLocker {
     using PermitParamsLibrary for *;
     using EpochLibrary for Epoch;
-    using SubstituteLibrary for ISubstitute;
 
     ILoanPositionManager private immutable _loanPositionManager;
     address private immutable _router;
@@ -31,12 +29,13 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
 
     constructor(
         address wrapped1155Factory,
-        address cloberMarketFactory,
+        address cloberController,
+        address bookManager,
         address couponManager,
         address weth,
         address loanPositionManager,
         address router
-    ) Controller(wrapped1155Factory, cloberMarketFactory, couponManager, weth) {
+    ) ControllerV2(wrapped1155Factory, cloberController, bookManager, couponManager, weth) {
         _loanPositionManager = ILoanPositionManager(loanPositionManager);
         _router = router;
     }
@@ -75,19 +74,12 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         }
 
         if (swapParams.inSubstitute == position.collateralToken) {
-            _swap(position.collateralToken, position.debtToken, swapParams.amount, swapParams.data);
+            _swap(positionId, position.collateralToken, position.debtToken, swapParams.amount, swapParams.data);
         } else if (swapParams.inSubstitute == position.debtToken) {
-            _swap(position.debtToken, position.collateralToken, swapParams.amount, swapParams.data);
+            _swap(positionId, position.debtToken, position.collateralToken, swapParams.amount, swapParams.data);
         }
 
-        _executeCouponTrade(
-            user,
-            position.debtToken,
-            couponsToMint,
-            couponsToBurn,
-            debtDelta < 0 ? uint256(-debtDelta) : 0,
-            interestThreshold
-        );
+        _executeCouponTrade(user, positionId, position.debtToken, couponsToMint, couponsToBurn, interestThreshold);
 
         if (collateralDelta > 0) {
             _mintSubstituteAll(position.collateralToken, user, uint256(collateralDelta));
@@ -95,6 +87,7 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
             _loanPositionManager.depositToken(position.collateralToken, uint256(collateralDelta));
         }
         if (debtDelta < 0) {
+            _mintSubstituteAll(position.debtToken, user, uint256(-debtDelta));
             IERC20(position.debtToken).approve(address(_loanPositionManager), uint256(-debtDelta));
             _loanPositionManager.depositToken(position.debtToken, uint256(-debtDelta));
         }
@@ -123,8 +116,8 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         bytes memory result = _loanPositionManager.lock(lockData);
         positionId = abi.decode(result, (uint256));
 
-        ISubstitute(collateralToken).burnAll(msg.sender);
-        ISubstitute(debtToken).burnAll(msg.sender);
+        _burnAllSubstitute(collateralToken, msg.sender);
+        _burnAllSubstitute(debtToken, msg.sender);
         _loanPositionManager.transferFrom(address(this), msg.sender, positionId);
     }
 
@@ -150,16 +143,20 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
 
         _loanPositionManager.lock(_encodeAdjustData(positionId, position, interestThreshold, swapParams));
 
-        ISubstitute(position.collateralToken).burnAll(msg.sender);
-        ISubstitute(position.debtToken).burnAll(msg.sender);
+        _burnAllSubstitute(position.collateralToken, msg.sender);
+        _burnAllSubstitute(position.debtToken, msg.sender);
     }
 
-    function _swap(address inSubstitute, address outSubstitute, uint256 inAmount, bytes memory swapParams)
-        internal
-        returns (uint256 outAmount)
-    {
+    function _swap(
+        uint256 positionId,
+        address inSubstitute,
+        address outSubstitute,
+        uint256 inAmount,
+        bytes memory swapParams
+    ) internal returns (uint256 outAmount) {
         address inToken = ISubstitute(inSubstitute).underlyingToken();
         address outToken = ISubstitute(outSubstitute).underlyingToken();
+        uint256 beforeOutTokenBalance = IERC20(outToken).balanceOf(address(this));
 
         ISubstitute(inSubstitute).burn(inAmount, address(this));
         if (inToken == address(_weth)) _weth.deposit{value: inAmount}();
@@ -168,7 +165,10 @@ contract BorrowController is IBorrowController, Controller, IPositionLocker {
         if (!success) revert CollateralSwapFailed(string(result));
         IERC20(inToken).approve(_router, 0);
 
-        outAmount = IERC20(outToken).balanceOf(address(this));
+        unchecked {
+            outAmount = IERC20(outToken).balanceOf(address(this)) - beforeOutTokenBalance;
+        }
+        emit SwapToken(positionId, inToken, outToken, inAmount, outAmount);
 
         IERC20(outToken).approve(outSubstitute, outAmount);
         ISubstitute(outSubstitute).mint(outAmount, address(this));

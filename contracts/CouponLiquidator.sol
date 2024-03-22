@@ -61,19 +61,15 @@ contract CouponLiquidator is ICouponLiquidator, IPositionLocker {
         (uint256 liquidationAmount, uint256 repayAmount, uint256 protocolFeeAmount) =
             _loanPositionManager.liquidate(positionId, maxRepayAmount);
 
-        ISubstitute(position.debtToken).ensureBalance(payer, repayAmount);
+        ISubstitute(position.debtToken).mintAll(payer, repayAmount);
         IERC20(position.debtToken).approve(address(_loanPositionManager), repayAmount);
         _loanPositionManager.depositToken(position.debtToken, repayAmount);
-
-        uint256 debtAmount = IERC20(outToken).balanceOf(address(this));
-        if (debtAmount > 0) {
-            IERC20(outToken).safeTransfer(recipient, debtAmount);
-        }
 
         uint256 collateralAmount = liquidationAmount - protocolFeeAmount - swapAmount;
 
         _loanPositionManager.withdrawToken(position.collateralToken, address(this), collateralAmount);
         _burnAllSubstitute(position.collateralToken, recipient);
+        _burnAllSubstitute(position.debtToken, recipient);
 
         return "";
     }

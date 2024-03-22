@@ -71,7 +71,7 @@ contract SimpleBondController is IPositionLocker, ERC1155Holder, ISimpleBondCont
         (Coupon[] memory couponsToMint, Coupon[] memory couponsToBurn, int256 amountDelta) =
             _bondPositionManager.adjustPosition(tokenId, amount, expiredWith);
         if (amountDelta > 0) {
-            ISubstitute(asset).ensureBalance(user, uint256(amountDelta));
+            ISubstitute(asset).mintAll(user, uint256(amountDelta));
             IERC20(asset).approve(address(_bondPositionManager), uint256(amountDelta));
             _bondPositionManager.depositToken(address(asset), uint256(amountDelta));
         } else if (amountDelta < 0) {

@@ -23,6 +23,7 @@ import {Wrapped1155MetadataBuilder} from "./Wrapped1155MetadataBuilder.sol";
 import {IERC721Permit} from "../interfaces/IERC721Permit.sol";
 import {ISubstitute} from "../interfaces/ISubstitute.sol";
 import {IController} from "../interfaces/IController.sol";
+import {SubstituteLibrary} from "../libraries/Substitute.sol";
 import {ReentrancyGuard} from "./ReentrancyGuard.sol";
 import {SubstituteLibrary} from "./Substitute.sol";
 
@@ -108,7 +109,7 @@ abstract contract Controller is
             market.marketOrder(address(this), 0, 0, lastCoupon.amount, 2, data);
         } else {
             if (remainingInterest < 0) revert ControllerSlippage();
-            ISubstitute(token).ensureBalance(user, amountToPay);
+            _mintSubstituteAll(token, user, amountToPay);
         }
     }
 
@@ -152,6 +153,10 @@ abstract contract Controller is
 
     function _getUnderlyingToken(address substitute) internal view returns (address) {
         return ISubstitute(substitute).underlyingToken();
+    }
+
+    function _mintSubstituteAll(address token, address user, uint256 minRequired) internal {
+        ISubstitute(token).mintAll(user, minRequired);
     }
 
     function _wrapCoupons(Coupon[] memory coupons) internal {

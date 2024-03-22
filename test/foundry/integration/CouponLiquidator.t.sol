@@ -222,7 +222,7 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
 
         address recipient = address(this);
         uint256 beforeUSDCBalance = usdc.balanceOf(recipient);
-        uint256 beforeWETHBalance = weth.balanceOf(recipient);
+        uint256 beforeNativeBalance = recipient.balance;
 
         address[] memory assets = new address[](3);
         assets[0] = Constants.COUPON_USDC_SUBSTITUTE;
@@ -250,7 +250,7 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
         couponLiquidator.liquidate(positionId, usdc.amount(500), data, 0, recipient);
 
         assertEq(usdc.balanceOf(recipient) - beforeUSDCBalance, 3344321, "USDC_BALANCE");
-        assertEq(weth.balanceOf(recipient) - beforeWETHBalance, 3348150879705280, "WETH_BALANCE");
+        assertEq(recipient.balance - beforeNativeBalance, 3348150879705280, "ETH_BALANCE");
     }
 
     function testLiquidatorWithRouterAndOwnLiquidity() public {
@@ -433,4 +433,6 @@ contract CouponLiquidatorIntegrationTest is Test, CloberMarketSwapCallbackReceiv
     function assertEq(Epoch e1, Epoch e2, string memory err) internal {
         assertEq(Epoch.unwrap(e1), Epoch.unwrap(e2), err);
     }
+
+    receive() external payable {}
 }

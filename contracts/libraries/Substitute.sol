@@ -10,21 +10,22 @@ import {ISubstitute} from "../interfaces/ISubstitute.sol";
 library SubstituteLibrary {
     using SafeERC20 for IERC20;
 
-    function ensureBalance(ISubstitute substitute, address payer, uint256 amount) internal {
-        uint256 balance = IERC20(address(substitute)).balanceOf(address(this));
-        if (balance >= amount) {
-            return;
-        }
+    function mintAll(ISubstitute substitute, address payer, uint256 minRequiredBalance) internal {
         address underlyingToken = substitute.underlyingToken();
+        uint256 thisBalance = IERC20(address(substitute)).balanceOf(address(this));
         uint256 underlyingBalance = IERC20(underlyingToken).balanceOf(address(this));
-        unchecked {
-            amount -= balance;
-            if (underlyingBalance < amount) {
-                IERC20(underlyingToken).safeTransferFrom(payer, address(this), amount - underlyingBalance);
+        if (minRequiredBalance > thisBalance + underlyingBalance) {
+            unchecked {
+                IERC20(underlyingToken).safeTransferFrom(
+                    payer, address(this), minRequiredBalance - thisBalance - underlyingBalance
+                );
+                underlyingBalance = minRequiredBalance - thisBalance;
             }
         }
-        IERC20(underlyingToken).approve(address(substitute), amount);
-        substitute.mint(amount, address(this));
+        if (underlyingBalance > 0) {
+            IERC20(underlyingToken).approve(address(substitute), underlyingBalance);
+            substitute.mint(underlyingBalance, address(this));
+        }
     }
 
     function burnAll(ISubstitute substitute, address to) internal {
