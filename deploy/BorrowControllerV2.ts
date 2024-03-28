@@ -3,20 +3,21 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { hardhat } from 'viem/chains'
 import {
   CLOBER_FACTORY,
+  COUPON_MANAGER,
+  LOAN_POSITION_MANAGER,
   TOKENS,
   WRAPPED1155_FACTORY,
   deployWithVerify,
-  COUPON_MANAGER,
-  BOND_POSITION_MANAGER,
   TOKEN_KEYS,
+  ROUTER,
+  CLOBERV2_CONTROLLER,
+  CLOBERV2_BOOK_MANAGER,
 } from '../utils'
 
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, network } = hre
 
-  // deprecated
-  return
-  if (await deployments.getOrNull('DepositController')) {
+  if (await deployments.getOrNull('BorrowControllerV2')) {
     return
   }
 
@@ -24,13 +25,15 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   const args = [
     WRAPPED1155_FACTORY[chainId],
-    CLOBER_FACTORY[chainId],
+    CLOBERV2_CONTROLLER[chainId],
+    CLOBERV2_BOOK_MANAGER[chainId],
     COUPON_MANAGER[chainId],
     TOKENS[chainId][TOKEN_KEYS.WETH],
-    BOND_POSITION_MANAGER[chainId],
+    LOAN_POSITION_MANAGER[chainId],
+    ROUTER[chainId],
   ]
-  await deployWithVerify(hre, 'DepositController', args)
+  await deployWithVerify(hre, 'BorrowControllerV2', args)
 }
 
-deployFunction.tags = ['DepositController']
+deployFunction.tags = ['BorrowControllerV2']
 export default deployFunction

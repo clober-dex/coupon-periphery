@@ -24,34 +24,48 @@ export const AAVE_V3_POOL: { [chainId: number]: Address } = {
 
 export const ASSET_POOL: { [chainId: number]: Address } = {
   [arbitrum.id]: '0xBA4B7f0Dd297C68Ca472da58CfE1338B9E7A0D9e',
+  [arbitrumSepolia.id]: '0xD90710a840441D7249dEF543c4BA2d24DC62BecC',
 }
 
 export const BOND_POSITION_MANAGER: { [chainId: number]: Address } = {
   [arbitrum.id]: '0x0Cf91Bc7a67B063142C029a69fF9C8ccd93476E2',
+  [arbitrumSepolia.id]: '0x9ef962bC0EacCe2aCf85Bd2456Af65B63d0746Fb',
 }
 
 export const COUPON_MANAGER: { [chainId: number]: Address } = {
   [arbitrum.id]: '0x8bbcA766D175aDbffB073832262990df1c5ef748',
+  [arbitrumSepolia.id]: '0xF4723F17a6CCb33cF7221636cc07ee7752F865FA',
 }
 
 export const COUPON_ORACLE: { [chainId: number]: Address } = {
   [arbitrum.id]: '0xF8e9ab02b057978c29Ca57c7E086D46983764A13',
+  [arbitrumSepolia.id]: '0x56F3907C71A0dcF4e354F9f5093Da0bE9AA050A4',
 }
 
 export const LOAN_POSITION_MANAGER: { [chainId: number]: Address } = {
   [arbitrum.id]: '0x03d65411684ae7B5440E11a6063881a774C733dF',
+  [arbitrumSepolia.id]: '0xa9c39C3B106023282F3E4da74B601585f15c3e0F',
 }
 
 export const CLOBER_FACTORY: { [chainId: number]: Address } = {
   [arbitrum.id]: '0x24aC0938C010Fb520F1068e96d78E0458855111D',
 }
 
-export const WRAPPED1155_FACTORY: { [chainId: number]: Address } = {
-  [arbitrum.id]: '0xfcBE16BfD991E4949244E59d9b524e6964b8BB75',
+export const CLOBERV2_BOOK_MANAGER: { [chainId: number]: Address } = {
+  [arbitrumSepolia.id]: '0x6411E5f824E1386d62ea20bFE5d815933F7E8491',
 }
 
-export const ODOS_ROUTER: { [chainId: number]: Address } = {
-  [arbitrum.id]: '0xa669e7A0d4b3e4Fa48af2dE86BD4CD7126Be4e13',
+export const CLOBERV2_CONTROLLER: { [chainId: number]: Address } = {
+  [arbitrumSepolia.id]: '0x2489e8daffb7A4900074840C24e8096A25e2Eeb0',
+}
+
+export const WRAPPED1155_FACTORY: { [chainId: number]: Address } = {
+  [arbitrum.id]: '0xfcBE16BfD991E4949244E59d9b524e6964b8BB75',
+  [arbitrumSepolia.id]: '0xfcBE16BfD991E4949244E59d9b524e6964b8BB75',
+}
+
+export const ROUTER: { [chainId: number]: Address } = {
+  [arbitrum.id]: '0xa669e7A0d4b3e4Fa48af2dE86BD4CD7126Be4e13', // odos router
   [arbitrumSepolia.id]: '0xfd71fBe411E839220b625826858578454f58F4b2',
 }
 

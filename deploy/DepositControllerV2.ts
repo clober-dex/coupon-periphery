@@ -9,14 +9,14 @@ import {
   COUPON_MANAGER,
   BOND_POSITION_MANAGER,
   TOKEN_KEYS,
+  CLOBERV2_CONTROLLER,
+  CLOBERV2_BOOK_MANAGER,
 } from '../utils'
 
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, network } = hre
 
-  // deprecated
-  return
-  if (await deployments.getOrNull('DepositController')) {
+  if (await deployments.getOrNull('DepositControllerV2')) {
     return
   }
 
@@ -24,13 +24,14 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   const args = [
     WRAPPED1155_FACTORY[chainId],
-    CLOBER_FACTORY[chainId],
+    CLOBERV2_CONTROLLER[chainId],
+    CLOBERV2_BOOK_MANAGER[chainId],
     COUPON_MANAGER[chainId],
     TOKENS[chainId][TOKEN_KEYS.WETH],
     BOND_POSITION_MANAGER[chainId],
   ]
-  await deployWithVerify(hre, 'DepositController', args)
+  await deployWithVerify(hre, 'DepositControllerV2', args)
 }
 
-deployFunction.tags = ['DepositController']
+deployFunction.tags = ['DepositControllerV2']
 export default deployFunction

@@ -6,6 +6,8 @@ import { deployWithVerify, COUPON_MANAGER, WRAPPED1155_FACTORY, CLOBER_FACTORY }
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, network } = hre
 
+  // deprecated
+  return
   if (await deployments.getOrNull('CouponMarketRouter')) {
     return
   }

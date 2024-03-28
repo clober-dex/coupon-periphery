@@ -9,11 +9,14 @@ import {
   WRAPPED1155_FACTORY,
   deployWithVerify,
   TOKEN_KEYS,
-  ODOS_ROUTER,
+  ROUTER,
 } from '../utils'
 
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, network } = hre
+
+  // deprecated
+  return
 
   if (await deployments.getOrNull('BorrowController')) {
     return
@@ -27,7 +30,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
     COUPON_MANAGER[chainId],
     TOKENS[chainId][TOKEN_KEYS.WETH],
     LOAN_POSITION_MANAGER[chainId],
-    ODOS_ROUTER[chainId],
+    ROUTER[chainId],
   ]
   await deployWithVerify(hre, 'BorrowController', args)
 }
