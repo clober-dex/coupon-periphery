@@ -5,22 +5,18 @@ pragma solidity ^0.8.0;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import {CloberMarketSwapCallbackReceiver} from "../external/clober/CloberMarketSwapCallbackReceiver.sol";
 import {IWETH9} from "../external/weth/IWETH9.sol";
 import {IWrapped1155Factory} from "../external/wrapped1155/IWrapped1155Factory.sol";
-import {CloberOrderBook} from "../external/clober/CloberOrderBook.sol";
 import {ICouponManager} from "../interfaces/ICouponManager.sol";
 import {Coupon, CouponLibrary} from "./Coupon.sol";
 import {CouponKey, CouponKeyLibrary} from "./CouponKey.sol";
 import {Wrapped1155MetadataBuilder} from "./Wrapped1155MetadataBuilder.sol";
-import {IERC721Permit} from "../interfaces/IERC721Permit.sol";
 import {ISubstitute} from "../interfaces/ISubstitute.sol";
 import {ReentrancyGuard} from "./ReentrancyGuard.sol";
 import {IController} from "../external/clober-v2/IController.sol";
@@ -29,7 +25,6 @@ import {BookId, BookIdLibrary} from "../external/clober-v2/BookId.sol";
 import {CurrencyLibrary, Currency} from "../external/clober-v2/Currency.sol";
 import {IControllerV2} from "../interfaces/IControllerV2.sol";
 import {SubstituteLibrary} from "./Substitute.sol";
-
 import {Epoch} from "./Epoch.sol";
 
 abstract contract ControllerV2 is IControllerV2, ERC1155Holder, Ownable2Step, ReentrancyGuard {

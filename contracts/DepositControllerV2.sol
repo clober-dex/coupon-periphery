@@ -10,10 +10,7 @@ import {IBondPositionManager} from "./interfaces/IBondPositionManager.sol";
 import {IPositionLocker} from "./interfaces/IPositionLocker.sol";
 import {BondPosition} from "./libraries/BondPosition.sol";
 import {Epoch, EpochLibrary} from "./libraries/Epoch.sol";
-import {CouponKey} from "./libraries/CouponKey.sol";
 import {Coupon} from "./libraries/Coupon.sol";
-import {ISubstitute} from "./interfaces/ISubstitute.sol";
-import {SubstituteLibrary} from "./libraries/Substitute.sol";
 import {ControllerV2} from "./libraries/ControllerV2.sol";
 import {ERC20PermitParams, PermitSignature, PermitParamsLibrary} from "./libraries/PermitParams.sol";
 
