@@ -138,7 +138,7 @@ const config: HardhatConfig = {
         },
       },
     },
-    [networkInfos.hardhat.network]: {
+    hardhat: {
       chainId: networkInfos.hardhat.id,
       gas: 20000000,
       gasPrice: 250000000000,
