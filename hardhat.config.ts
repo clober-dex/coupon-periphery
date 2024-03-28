@@ -77,7 +77,7 @@ const config: HardhatConfig = {
   solidity: {
     compilers: [
       {
-        version: '0.8.23',
+        version: '0.8.25',
         settings: {
           optimizer: {
             enabled: true,
@@ -91,9 +91,10 @@ const config: HardhatConfig = {
   etherscan: {
     apiKey: {
       arbitrumOne: process.env.ARBISCAN_API_KEY ?? '',
-      arbitrumGoerli: process.env.ARBISCAN_API_KEY ?? '',
+      arbitrumSepolia: process.env.ARBISCAN_API_KEY ?? '',
     },
     customChains: [],
+    enabled: true,
   },
   defaultNetwork: 'hardhat',
   networks: {
@@ -102,7 +103,7 @@ const config: HardhatConfig = {
       chainId: networkInfos.arbitrum.id,
       accounts: [loadPrivateKeyFromKeyfile()],
       gas: 'auto',
-      gasPrice: 100000000,
+      gasPrice: 'auto',
       gasMultiplier: 1,
       timeout: 3000000,
       httpHeaders: {},
@@ -117,12 +118,31 @@ const config: HardhatConfig = {
         },
       },
     },
+    [networkInfos.arbitrumSepolia.id]: {
+      url: networkInfos.arbitrumSepolia.rpcUrls.default.http[0],
+      chainId: networkInfos.arbitrumSepolia.id,
+      accounts: process.env.TEST_NET_PRIVATE_KEY ? [process.env.TEST_NET_PRIVATE_KEY] : [],
+      gas: 'auto',
+      gasPrice: 'auto',
+      gasMultiplier: 1,
+      timeout: 3000000,
+      httpHeaders: {},
+      live: true,
+      saveDeployments: true,
+      tags: ['testnet', 'test'],
+      companionNetworks: {},
+      verify: {
+        etherscan: {
+          apiKey: process.env.ARBISCAN_API_KEY,
+          apiUrl: 'https://api-sepolia.arbiscan.io',
+        },
+      },
+    },
     [networkInfos.hardhat.network]: {
       chainId: networkInfos.hardhat.id,
       gas: 20000000,
       gasPrice: 250000000000,
       gasMultiplier: 1,
-      hardfork: 'shanghai',
       // @ts-ignore
       // forking: {
       //   enabled: true,

@@ -2,7 +2,7 @@ import { task } from 'hardhat/config'
 import { AAVE_V3_POOL, OWNER, SINGLETON_FACTORY, TOKEN_KEYS, TOKENS, TREASURY, verify } from '../utils'
 import { hardhat } from 'viem/chains'
 import AaveTokenSubstitute from '../artifacts/contracts/AaveTokenSubstitute.sol/AaveTokenSubstitute.json'
-import { encodeDeployData, Hex, getCreate2Address, padHex } from 'viem'
+import { encodeDeployData, Hex, getCreate2Address, padHex, Address } from 'viem'
 
 task('substitute:aave:deploy')
   .addParam('asset', 'name of the asset')
@@ -15,7 +15,7 @@ task('substitute:aave:deploy')
     if (!aaveV3Pool || !treasury) {
       throw new Error('missing aaveV3Pool or treasury')
     }
-    const constructorArgs = [
+    const constructorArgs: [Address, Address, Address, Address, Address] = [
       TOKENS[chainId][TOKEN_KEYS.WETH],
       TOKENS[chainId][asset],
       aaveV3Pool,
@@ -24,7 +24,7 @@ task('substitute:aave:deploy')
     ]
     const deployData = encodeDeployData({
       abi: emptyAaveSubstitute.abi,
-      args: [TOKENS[chainId][TOKEN_KEYS.WETH], TOKENS[chainId][asset], aaveV3Pool, treasury, OWNER[chainId]],
+      args: constructorArgs,
       bytecode: AaveTokenSubstitute.bytecode as Hex,
     })
     const computedAddress = getCreate2Address({
