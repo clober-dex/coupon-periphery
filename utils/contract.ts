@@ -8,6 +8,14 @@ export const getDeployedAddress = async (name: string): Promise<Address> => {
   return `0x${deployments.address.startsWith('0x') ? deployments.address.slice(2) : deployments.address}`
 }
 
+export const encodeFeePolicy = (useQuote: boolean, rate: bigint): number => {
+  if (rate > 500000n || rate < -500000n) {
+    throw new Error('INVALID_RATE')
+  }
+  const mask = useQuote ? 1n << 23n : 0n
+  return Number(mask | (rate + 500000n))
+}
+
 export const verify = async (contractAddress: string, args: any[]) => {
   liveLog(`Verifying Contract: ${contractAddress}`)
   try {

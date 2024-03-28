@@ -1,6 +1,6 @@
 import { task } from 'hardhat/config'
 import { hardhat } from 'viem/chains'
-import { decodeEventLog, zeroAddress } from 'viem'
+import { decodeEventLog, Hex, zeroAddress } from 'viem'
 import {
   SUBSTITUTES,
   CLOBER_FACTORY,
@@ -11,7 +11,9 @@ import {
   convertToCouponId,
   getDeployedAddress,
   liveLog,
-  TOKEN_KEYS,
+  CLOBERV2_CONTROLLER,
+  encodeFeePolicy,
+  sleep,
 } from '../utils'
 
 task('coupon:current-epoch').setAction(async (taskArgs, hre) => {
@@ -49,6 +51,74 @@ task('coupon:deploy-wrapped-token')
       metadata,
     ])
     liveLog(`Deployed ${asset} for epoch ${epoch} at ${computedAddress} at ${transactionHash}`)
+  })
+
+task('coupon:open-clober-book')
+  .addParam('asset', 'the name of the asset')
+  .addParam<number>('epoch', 'the epoch number')
+  .setAction(async ({ asset, epoch }, hre) => {
+    if (typeof epoch === 'string') {
+      epoch = parseInt(epoch)
+    }
+    const chainId = hre.network.config.chainId ?? hardhat.id
+    const couponManager = await hre.viem.getContractAt('ICouponManager', COUPON_MANAGER[chainId])
+    const wrapped1155Factory = await hre.viem.getContractAt('IWrapped1155Factory', WRAPPED1155_FACTORY[chainId])
+    const cloberController = await hre.viem.getContractAt(
+      'contracts/external/clober-v2/IController.sol:IController',
+      CLOBERV2_CONTROLLER[chainId],
+    )
+    const depositController = await hre.viem.getContractAt(
+      'DepositControllerV2',
+      await getDeployedAddress('DepositControllerV2'),
+    )
+    const borrowController = await hre.viem.getContractAt(
+      'BorrowControllerV2',
+      await getDeployedAddress('BorrowControllerV2'),
+    )
+    const token = SUBSTITUTES[chainId][asset]
+    if (epoch < (await couponManager.read.currentEpoch())) {
+      throw new Error('Cannot deploy for past epoch')
+    }
+    const computedAddress = await wrapped1155Factory.read.getWrapped1155([
+      couponManager.address,
+      convertToCouponId(token, epoch),
+      await buildWrapped1155Metadata(token, epoch),
+    ])
+    const decimals = await (await hre.viem.getContractAt('IERC20Metadata', token)).read.decimals()
+    const sellBookKey = {
+      quote: token,
+      unit: decimals < 9 ? 1n : 10n ** (BigInt(decimals) - 6n),
+      base: computedAddress,
+      makerPolicy: encodeFeePolicy(true, -1000n),
+      takerPolicy: encodeFeePolicy(true, 2000n),
+      hooks: zeroAddress,
+    }
+    const buyBookKey = {
+      quote: computedAddress,
+      unit: decimals < 9 ? 1n : 10n ** (BigInt(decimals) - 6n),
+      base: token,
+      makerPolicy: encodeFeePolicy(false, -1000n),
+      takerPolicy: encodeFeePolicy(false, 2000n),
+      hooks: zeroAddress,
+    }
+    let transactionHash = await cloberController.write.open([
+      [
+        { key: sellBookKey, hookData: '0x' as Hex },
+        { key: buyBookKey, hookData: '0x' as Hex },
+      ],
+      2n ** 64n - 1n,
+    ])
+    liveLog(`Opened Books for ${asset}-${epoch} on tx ${transactionHash}`)
+
+    await sleep(1000)
+
+    transactionHash = await depositController.write.setCouponBookKey([{ asset: token, epoch }, sellBookKey, buyBookKey])
+    liveLog(`Set deposit controller for ${asset}-${epoch} on tx ${transactionHash}`)
+
+    await sleep(1000)
+
+    transactionHash = await borrowController.write.setCouponBookKey([{ asset: token, epoch }, sellBookKey, buyBookKey])
+    liveLog(`Set borrow controller for ${asset}-${epoch} on tx ${transactionHash}`)
   })
 
 task('coupon:create-clober-market')
